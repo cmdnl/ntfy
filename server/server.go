@@ -56,8 +56,8 @@ type Server struct {
 	messages          int64                               // Total number of messages (persisted if messageCache enabled)
 	messagesHistory   []int64                             // Last n values of the messages counter, used to determine rate
 	userManager       *user.Manager                       // Might be nil!
-	messageCache      *messageCache                       // Database that stores the messages
-	webPush           *webPushStore                       // Database that stores web push subscriptions
+	messageCache      MessageCache                        // Database that stores the messages
+	webPush           WebPushStore                        // Database that stores web push subscriptions
 	fileCache         *fileCache                          // File system based cache that stores attachments
 	stripe            stripeAPI                           // Stripe API, can be replaced with a mock
 	priceCache        *util.LookupCache[map[string]int64] // Stripe price ID -> price as cents (USD implied!)
@@ -173,7 +173,7 @@ func New(conf *Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	var webPush *webPushStore
+	var webPush WebPushStore
 	if conf.WebPushPublicKey != "" {
 		webPush, err = newWebPushStore(conf.WebPushFile, conf.WebPushStartupQueries)
 		if err != nil {
@@ -245,9 +245,11 @@ func New(conf *Config) (*Server, error) {
 	return s, nil
 }
 
-func createMessageCache(conf *Config) (*messageCache, error) {
+func createMessageCache(conf *Config) (MessageCache, error) {
 	if conf.CacheDuration == 0 {
 		return newNopCache()
+	} else if isPostgres(conf.CacheFile) {
+		return newPgCache(strings.TrimPrefix(conf.CacheFile, "postgres:"), conf.CacheStartupQueries, conf.CacheBatchSize, conf.CacheBatchTimeout)
 	} else if conf.CacheFile != "" {
 		return newSqliteCache(conf.CacheFile, conf.CacheStartupQueries, conf.CacheDuration, conf.CacheBatchSize, conf.CacheBatchTimeout, false)
 	}

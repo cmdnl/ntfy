@@ -3,11 +3,11 @@ package server
 import (
 	"database/sql"
 	"errors"
-	"heckel.io/ntfy/v2/util"
 	"net/netip"
+	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3" // SQLite driver
+	"heckel.io/ntfy/v2/util"
 )
 
 const (
@@ -22,126 +22,49 @@ var (
 	errWebPushUserIDCannotBeEmpty  = errors.New("user ID cannot be empty")
 )
 
-const (
-	createWebPushSubscriptionsTableQuery = `
-		BEGIN;
-		CREATE TABLE IF NOT EXISTS subscription (
-			id TEXT PRIMARY KEY,
-			endpoint TEXT NOT NULL,
-			key_auth TEXT NOT NULL,
-			key_p256dh TEXT NOT NULL,
-			user_id TEXT NOT NULL,		
-			subscriber_ip TEXT NOT NULL,
-			updated_at INT NOT NULL,
-			warned_at INT NOT NULL DEFAULT 0
-		);
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_endpoint ON subscription (endpoint);
-		CREATE INDEX IF NOT EXISTS idx_subscriber_ip ON subscription (subscriber_ip);
-		CREATE TABLE IF NOT EXISTS subscription_topic (
-			subscription_id TEXT NOT NULL,
-			topic TEXT NOT NULL,
-			PRIMARY KEY (subscription_id, topic),
-			FOREIGN KEY (subscription_id) REFERENCES subscription (id) ON DELETE CASCADE
-		);
-		CREATE INDEX IF NOT EXISTS idx_topic ON subscription_topic (topic);
-		CREATE TABLE IF NOT EXISTS schemaVersion (
-			id INT PRIMARY KEY,
-			version INT NOT NULL
-		);			
-		COMMIT;
-	`
-	builtinStartupQueries = `
-		PRAGMA foreign_keys = ON;
-	`
+// WebPushStore is an interface for storing web push subscriptions
+type WebPushStore interface {
+	UpsertSubscription(endpoint string, auth, p256dh, userID string, subscriberIP netip.Addr, topics []string) error
+	SubscriptionsForTopic(topic string) ([]*webPushSubscription, error)
+	SubscriptionsExpiring(warnAfter time.Duration) ([]*webPushSubscription, error)
+	MarkExpiryWarningSent(subscriptions []*webPushSubscription) error
+	RemoveSubscriptionsByEndpoint(endpoint string) error
+	RemoveSubscriptionsByUserID(userID string) error
+	RemoveExpiredSubscriptions(expireAfter time.Duration) error
+	DB() *sql.DB
+	Close() error
+}
 
-	selectWebPushSubscriptionIDByEndpoint        = `SELECT id FROM subscription WHERE endpoint = ?`
-	selectWebPushSubscriptionCountBySubscriberIP = `SELECT COUNT(*) FROM subscription WHERE subscriber_ip = ?`
-	selectWebPushSubscriptionsForTopicQuery      = `
-		SELECT id, endpoint, key_auth, key_p256dh, user_id
-		FROM subscription_topic st
-		JOIN subscription s ON s.id = st.subscription_id
-		WHERE st.topic = ?
-		ORDER BY endpoint
-	`
-	selectWebPushSubscriptionsExpiringSoonQuery = `
-		SELECT id, endpoint, key_auth, key_p256dh, user_id 
-		FROM subscription 
-		WHERE warned_at = 0 AND updated_at <= ?
-	`
-	insertWebPushSubscriptionQuery = `
-		INSERT INTO subscription (id, endpoint, key_auth, key_p256dh, user_id, subscriber_ip, updated_at, warned_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT (endpoint) 
-		DO UPDATE SET key_auth = excluded.key_auth, key_p256dh = excluded.key_p256dh, user_id = excluded.user_id, subscriber_ip = excluded.subscriber_ip, updated_at = excluded.updated_at, warned_at = excluded.warned_at
-	`
-	updateWebPushSubscriptionWarningSentQuery = `UPDATE subscription SET warned_at = ? WHERE id = ?`
-	deleteWebPushSubscriptionByEndpointQuery  = `DELETE FROM subscription WHERE endpoint = ?`
-	deleteWebPushSubscriptionByUserIDQuery    = `DELETE FROM subscription WHERE user_id = ?`
-	deleteWebPushSubscriptionByAgeQuery       = `DELETE FROM subscription WHERE updated_at <= ?` // Full table scan!
-
-	insertWebPushSubscriptionTopicQuery               = `INSERT INTO subscription_topic (subscription_id, topic) VALUES (?, ?)`
-	deleteWebPushSubscriptionTopicAllQuery            = `DELETE FROM subscription_topic WHERE subscription_id = ?`
-	deleteWebPushSubscriptionTopicWithoutSubscription = `DELETE FROM subscription_topic WHERE subscription_id NOT IN (SELECT id FROM subscription)`
-)
-
-// Schema management queries
-const (
-	currentWebPushSchemaVersion     = 1
-	insertWebPushSchemaVersion      = `INSERT INTO schemaVersion VALUES (1, ?)`
-	selectWebPushSchemaVersionQuery = `SELECT version FROM schemaVersion WHERE id = 1`
-)
+// webPushQueries holds all the SQL queries used by webPushStore
+type webPushQueries struct {
+	selectSubscriptionIDByEndpoint        string
+	selectSubscriptionCountBySubscriberIP string
+	selectSubscriptionsForTopic           string
+	selectSubscriptionsExpiringSoon       string
+	insertSubscription                    string
+	updateSubscriptionWarningSent         string
+	deleteSubscriptionByEndpoint          string
+	deleteSubscriptionByUserID            string
+	deleteSubscriptionByAge               string
+	insertSubscriptionTopic               string
+	deleteSubscriptionTopicAll            string
+	deleteSubscriptionTopicWithoutSub     string
+}
 
 type webPushStore struct {
-	db *sql.DB
+	db      *sql.DB
+	queries *webPushQueries
 }
 
-func newWebPushStore(filename, startupQueries string) (*webPushStore, error) {
-	db, err := sql.Open("sqlite3", filename)
-	if err != nil {
-		return nil, err
+// newWebPushStore creates a new webPushStore based on the connection string
+func newWebPushStore(filename, startupQueries string) (WebPushStore, error) {
+	if strings.HasPrefix(filename, "postgres:") {
+		return newPgWebPushStore(strings.TrimPrefix(filename, "postgres:"), startupQueries)
 	}
-	if err := setupWebPushDB(db); err != nil {
-		return nil, err
-	}
-	if err := runWebPushStartupQueries(db, startupQueries); err != nil {
-		return nil, err
-	}
-	return &webPushStore{
-		db: db,
-	}, nil
+	return newSqliteWebPushStore(filename, startupQueries)
 }
 
-func setupWebPushDB(db *sql.DB) error {
-	// If 'schemaVersion' table does not exist, this must be a new database
-	rows, err := db.Query(selectWebPushSchemaVersionQuery)
-	if err != nil {
-		return setupNewWebPushDB(db)
-	}
-	return rows.Close()
-}
-
-func setupNewWebPushDB(db *sql.DB) error {
-	if _, err := db.Exec(createWebPushSubscriptionsTableQuery); err != nil {
-		return err
-	}
-	if _, err := db.Exec(insertWebPushSchemaVersion, currentWebPushSchemaVersion); err != nil {
-		return err
-	}
-	return nil
-}
-
-func runWebPushStartupQueries(db *sql.DB, startupQueries string) error {
-	if _, err := db.Exec(startupQueries); err != nil {
-		return err
-	}
-	if _, err := db.Exec(builtinStartupQueries); err != nil {
-		return err
-	}
-	return nil
-}
-
-// UpsertSubscription adds or updates Web Push subscriptions for the given topics and user ID. It always first deletes all
-// existing entries for a given endpoint.
+// UpsertSubscription adds or updates Web Push subscriptions for the given topics and user ID
 func (c *webPushStore) UpsertSubscription(endpoint string, auth, p256dh, userID string, subscriberIP netip.Addr, topics []string) error {
 	tx, err := c.db.Begin()
 	if err != nil {
@@ -149,7 +72,7 @@ func (c *webPushStore) UpsertSubscription(endpoint string, auth, p256dh, userID 
 	}
 	defer tx.Rollback()
 	// Read number of subscriptions for subscriber IP address
-	rowsCount, err := tx.Query(selectWebPushSubscriptionCountBySubscriberIP, subscriberIP.String())
+	rowsCount, err := tx.Query(c.queries.selectSubscriptionCountBySubscriberIP, subscriberIP.String())
 	if err != nil {
 		return err
 	}
@@ -165,7 +88,7 @@ func (c *webPushStore) UpsertSubscription(endpoint string, auth, p256dh, userID 
 		return err
 	}
 	// Read existing subscription ID for endpoint (or create new ID)
-	rows, err := tx.Query(selectWebPushSubscriptionIDByEndpoint, endpoint)
+	rows, err := tx.Query(c.queries.selectSubscriptionIDByEndpoint, endpoint)
 	if err != nil {
 		return err
 	}
@@ -186,15 +109,15 @@ func (c *webPushStore) UpsertSubscription(endpoint string, auth, p256dh, userID 
 	}
 	// Insert or update subscription
 	updatedAt, warnedAt := time.Now().Unix(), 0
-	if _, err = tx.Exec(insertWebPushSubscriptionQuery, subscriptionID, endpoint, auth, p256dh, userID, subscriberIP.String(), updatedAt, warnedAt); err != nil {
+	if _, err = tx.Exec(c.queries.insertSubscription, subscriptionID, endpoint, auth, p256dh, userID, subscriberIP.String(), updatedAt, warnedAt); err != nil {
 		return err
 	}
 	// Replace all subscription topics
-	if _, err := tx.Exec(deleteWebPushSubscriptionTopicAllQuery, subscriptionID); err != nil {
+	if _, err := tx.Exec(c.queries.deleteSubscriptionTopicAll, subscriptionID); err != nil {
 		return err
 	}
 	for _, topic := range topics {
-		if _, err = tx.Exec(insertWebPushSubscriptionTopicQuery, subscriptionID, topic); err != nil {
+		if _, err = tx.Exec(c.queries.insertSubscriptionTopic, subscriptionID, topic); err != nil {
 			return err
 		}
 	}
@@ -203,7 +126,7 @@ func (c *webPushStore) UpsertSubscription(endpoint string, auth, p256dh, userID 
 
 // SubscriptionsForTopic returns all subscriptions for the given topic
 func (c *webPushStore) SubscriptionsForTopic(topic string) ([]*webPushSubscription, error) {
-	rows, err := c.db.Query(selectWebPushSubscriptionsForTopicQuery, topic)
+	rows, err := c.db.Query(c.queries.selectSubscriptionsForTopic, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +136,7 @@ func (c *webPushStore) SubscriptionsForTopic(topic string) ([]*webPushSubscripti
 
 // SubscriptionsExpiring returns all subscriptions that have not been updated for a given time period
 func (c *webPushStore) SubscriptionsExpiring(warnAfter time.Duration) ([]*webPushSubscription, error) {
-	rows, err := c.db.Query(selectWebPushSubscriptionsExpiringSoonQuery, time.Now().Add(-warnAfter).Unix())
+	rows, err := c.db.Query(c.queries.selectSubscriptionsExpiringSoon, time.Now().Add(-warnAfter).Unix())
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +152,7 @@ func (c *webPushStore) MarkExpiryWarningSent(subscriptions []*webPushSubscriptio
 	}
 	defer tx.Rollback()
 	for _, subscription := range subscriptions {
-		if _, err := tx.Exec(updateWebPushSubscriptionWarningSentQuery, time.Now().Unix(), subscription.ID); err != nil {
+		if _, err := tx.Exec(c.queries.updateSubscriptionWarningSent, time.Now().Unix(), subscription.ID); err != nil {
 			return err
 		}
 	}
@@ -256,7 +179,7 @@ func (c *webPushStore) subscriptionsFromRows(rows *sql.Rows) ([]*webPushSubscrip
 
 // RemoveSubscriptionsByEndpoint removes the subscription for the given endpoint
 func (c *webPushStore) RemoveSubscriptionsByEndpoint(endpoint string) error {
-	_, err := c.db.Exec(deleteWebPushSubscriptionByEndpointQuery, endpoint)
+	_, err := c.db.Exec(c.queries.deleteSubscriptionByEndpoint, endpoint)
 	return err
 }
 
@@ -265,18 +188,23 @@ func (c *webPushStore) RemoveSubscriptionsByUserID(userID string) error {
 	if userID == "" {
 		return errWebPushUserIDCannotBeEmpty
 	}
-	_, err := c.db.Exec(deleteWebPushSubscriptionByUserIDQuery, userID)
+	_, err := c.db.Exec(c.queries.deleteSubscriptionByUserID, userID)
 	return err
 }
 
 // RemoveExpiredSubscriptions removes all subscriptions that have not been updated for a given time period
 func (c *webPushStore) RemoveExpiredSubscriptions(expireAfter time.Duration) error {
-	_, err := c.db.Exec(deleteWebPushSubscriptionByAgeQuery, time.Now().Add(-expireAfter).Unix())
+	_, err := c.db.Exec(c.queries.deleteSubscriptionByAge, time.Now().Add(-expireAfter).Unix())
 	if err != nil {
 		return err
 	}
-	_, err = c.db.Exec(deleteWebPushSubscriptionTopicWithoutSubscription)
+	_, err = c.db.Exec(c.queries.deleteSubscriptionTopicWithoutSub)
 	return err
+}
+
+// DB returns the underlying database connection (for testing)
+func (c *webPushStore) DB() *sql.DB {
+	return c.db
 }
 
 // Close closes the underlying database connection

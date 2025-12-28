@@ -134,7 +134,7 @@ func TestWebPushStore_MarkExpiryWarningSent(t *testing.T) {
 	// Mark them as warning sent
 	require.Nil(t, webPush.MarkExpiryWarningSent(subs))
 
-	rows, err := webPush.db.Query("SELECT endpoint FROM subscription WHERE warned_at > 0")
+	rows, err := webPush.DB().Query("SELECT endpoint FROM subscription WHERE warned_at > 0")
 	require.Nil(t, err)
 	defer rows.Close()
 	var endpoint string
@@ -156,7 +156,7 @@ func TestWebPushStore_SubscriptionsExpiring(t *testing.T) {
 	require.Len(t, subs, 1)
 
 	// Fake-mark them as soon-to-expire
-	_, err = webPush.db.Exec("UPDATE subscription SET updated_at = ? WHERE endpoint = ?", time.Now().Add(-8*24*time.Hour).Unix(), testWebPushEndpoint)
+	_, err = webPush.DB().Exec("UPDATE subscription SET updated_at = ? WHERE endpoint = ?", time.Now().Add(-8*24*time.Hour).Unix(), testWebPushEndpoint)
 	require.Nil(t, err)
 
 	// Should not be cleaned up yet
@@ -180,7 +180,7 @@ func TestWebPushStore_RemoveExpiredSubscriptions(t *testing.T) {
 	require.Len(t, subs, 1)
 
 	// Fake-mark them as expired
-	_, err = webPush.db.Exec("UPDATE subscription SET updated_at = ? WHERE endpoint = ?", time.Now().Add(-10*24*time.Hour).Unix(), testWebPushEndpoint)
+	_, err = webPush.DB().Exec("UPDATE subscription SET updated_at = ? WHERE endpoint = ?", time.Now().Add(-10*24*time.Hour).Unix(), testWebPushEndpoint)
 	require.Nil(t, err)
 
 	// Run expiration
@@ -192,7 +192,7 @@ func TestWebPushStore_RemoveExpiredSubscriptions(t *testing.T) {
 	require.Len(t, subs, 0)
 }
 
-func newTestWebPushStore(t *testing.T) *webPushStore {
+func newTestWebPushStore(t *testing.T) WebPushStore {
 	webPush, err := newWebPushStore(filepath.Join(t.TempDir(), "webpush.db"), "")
 	require.Nil(t, err)
 	return webPush

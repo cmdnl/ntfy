@@ -1578,7 +1578,7 @@ func checkSchemaVersion(t *testing.T, db *sql.DB) {
 
 	var schemaVersion int
 	require.Nil(t, rows.Scan(&schemaVersion))
-	require.Equal(t, currentSchemaVersion, schemaVersion)
+	require.Equal(t, sqliteCurrentSchemaVersion, schemaVersion)
 	require.Nil(t, rows.Close())
 }
 
