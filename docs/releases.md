@@ -4,15 +4,31 @@ and the [ntfy Android app](https://github.com/binwiederhier/ntfy-android/release
 
 ## Current stable releases
 
-| Component        | Version | Release date |
-|------------------|---------|--------------|
-| ntfy server      | v2.15.0 | Nov 16, 2025 |
-| ntfy Android app | v1.19.4 | Dec 21, 2025 |
-| ntfy iOS app     | v1.3    | Nov 26, 2023 |
+| Component                                | Version | Release date |
+|------------------------------------------|---------|--------------|
+| ntfy server                              | v2.15.0 | Nov 16, 2025 |
+| ntfy Android app (_is being rolled out_) | v1.20.0 | Dec 28, 2025 |
+| ntfy iOS app                             | v1.3    | Nov 26, 2023 |
 
 Please check out the release notes for [upcoming releases](#not-released-yet) below.
 
-### ntfy Android app v1.19.4
+## ntfy Android app v1.20.0
+Released December 28, 2025
+
+This is the last pure maintenance release for now. It'll bring all dependencies and library version to the latest version,
+and fixes some crashes. I had to drop support for about 4,000 devices (only ~200 installations), because the libraries
+themselves do not support SDK 21 anymore, which was the previous minimum SDK version (Android 5, 2014). Now the minimum
+SDK version is 26 (Android 8, 2017).
+
+**Bug fixes + maintenance:**
+
+* Updated dependencies, minimum SDK version to 26, clean up legacy code, upgrade Gradle ([ntfy-android#140](https://github.com/binwiederhier/ntfy-android/pull/140),
+  thanks to [@cyb3rko](https://github.com/cyb3rko) for the implementation)
+* Updated target SDK version to 36 (Android 8, 2017)
+* Fixed ForegroundServiceDidNotStartInTimeException ([#1520](https://github.com/binwiederhier/ntfy/issues/1520))
+* Fixed crashes with redrawing the list when temporarily muted topics expire
+
+## ntfy Android app v1.19.4
 Released December 21, 2025
 
 This release upgrades the Android app to use [Material 3](https://m3.material.io/) design components and adds the
@@ -1556,15 +1572,18 @@ and the [ntfy Android app](https://github.com/binwiederhier/ntfy-android/release
 
 ## Not released yet
 
-### ntfy Android app v1.20.x
-
-**Bug fixes + maintenance:**
-
-* Updated dependencies, minimum SDK version to 26, clean up legacy code, upgrade Gradle ([ntfy-android#140](https://github.com/binwiederhier/ntfy-android/pull/140),
-  thanks to [@cyb3rko](https://github.com/cyb3rko) for the implementation)
-
 ### ntfy Android app v1.21.x
+
+**Features:**
+
+* Allow publishing messages through the message bar and publish dialog ([#98](https://github.com/binwiederhier/ntfy/issues/98), [ntfy-android#144](https://github.com/binwiederhier/ntfy-android/pull/144))
+* Define custom HTTP headers to support authenticated proxies, tunnels and SSO ([ntfy-android#116](https://github.com/binwiederhier/ntfy-android/issues/116), [#1018](https://github.com/binwiederhier/ntfy/issues/1018), [ntfy-android#132](https://github.com/binwiederhier/ntfy-android/pull/132), [ntfy-android#146](https://github.com/binwiederhier/ntfy-android/pull/146), thanks to [@CrazyWolf13](https://github.com/CrazyWolf13))
+* Implement UnifiedPush "raise to foreground" requirement ([ntfy-android#98](https://github.com/binwiederhier/ntfy-android/pull/98), [ntfy-android#148](https://github.com/binwiederhier/ntfy-android/pull/148), thanks to [@p1gp1g](https://github.com/p1gp1g))
+* Language selector to allow overriding the system language ([#1508](https://github.com/binwiederhier/ntfy/issues/1508), [ntfy-android#145](https://github.com/binwiederhier/ntfy-android/pull/145), thanks to [@hudsonm62](https://github.com/hudsonm62) for reporting)
+* Highlight phone numbers and email addresses in notifications ([#957](https://github.com/binwiederhier/ntfy/issues/957), [ntfy-android#71](https://github.com/binwiederhier/ntfy-android/pull/71), thanks to [@brennenputh](https://github.com/brennenputh), and [@XylenSky](https://github.com/XylenSky) for reporting)
+* Support for port and display name in [ntfy://](subscribe/phone.md#ntfy-links) links ([ntfy-android#130](https://github.com/binwiederhier/ntfy-android/pull/130), thanks to [@godovski](https://github.com/godovski))
 
 **Bug fixes + maintenance:**
 
 * Add support for (technically incorrect) 'image/jpg' MIME type ([ntfy-android#142](https://github.com/binwiederhier/ntfy-android/pull/142), thanks to [@Murilobeluco](https://github.com/Murilobeluco))
+* Unify "copy to clipboard" notifications, use Android 13 style ([ntfy-android#61](https://github.com/binwiederhier/ntfy-android/pull/61), thanks to [@thgoebel](https://github.com/thgoebel))

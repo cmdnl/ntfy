@@ -403,5 +403,7 @@
     "prefs_appearance_theme_system": "Системна (подразбирана)",
     "web_push_subscription_expiring_title": "Известията временно ще бъдат спрени",
     "web_push_subscription_expiring_body": "За да продължите да получавате известия, отворете ntfy",
-    "action_bar_unmute_notifications": "Включване звука на известията"
+    "action_bar_unmute_notifications": "Включване звука на известията",
+    "account_tokens_table_cannot_delete_or_edit_provisioned_token": "Кодът за защита от външна система не може да бъде променян или премахван",
+    "account_basics_cannot_edit_or_delete_provisioned_user": "Потребител от външна система не може да бъде променян или премахван"
 }

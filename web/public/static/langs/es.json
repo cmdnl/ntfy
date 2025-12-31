@@ -404,5 +404,7 @@
     "prefs_appearance_theme_dark": "Oscuro",
     "web_push_subscription_expiring_body": "Abrir ntfy para seguir recibiendo notificaciones",
     "web_push_unknown_notification_title": "Notificación desconocida recibida del servidor",
-    "web_push_unknown_notification_body": "Puede que necesites actualizar ntfy abriendo la aplicación web"
+    "web_push_unknown_notification_body": "Puede que necesites actualizar ntfy abriendo la aplicación web",
+    "account_basics_cannot_edit_or_delete_provisioned_user": "Un usuario provisionado no se puede editar o eliminar",
+    "account_tokens_table_cannot_delete_or_edit_provisioned_token": "No se puede editar o eliminar un token provisionado"
 }

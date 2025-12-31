@@ -181,6 +181,7 @@ I've added a ⭐ to projects or posts that have a significant following, or had 
 - [ntfy-heartbeat-monitor](https://codeberg.org/RockWolf/ntfy-heartbeat-monitor) - Application for implementing heartbeat monitoring/alerting by utilizing ntfy
 - [ntfy-bridge](https://github.com/AlexGaudon/ntfy-bridge) - An application to bridge Discord messages (or webhooks) to ntfy.
 - [ntailfy](https://github.com/leukosaima/ntailfy) - ntfy notifications when Tailscale devices connect/disconnect (Go)
+- [BRun](https://github.com/cbrake/brun) - Native Linux automation platform connecting triggers to actions without containers (Go)
 
 ## Blog + forum posts
 

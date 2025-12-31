@@ -1029,6 +1029,36 @@ or the root domain:
         redir @httpget https://{host}{uri}
     }
     ```
+	
+=== "ferron"
+    ``` kdl
+    // /etc/ferron.kdl	
+    // Note that this config is most certainly incomplete. Please help out and let me know what's missing
+    // via Discord/Matrix or in a GitHub issue.
+    // Note: Ferron automatically handles both HTTP and WebSockets with proxy 
+
+    ntfy.sh {
+        auto_tls
+        auto_tls_letsencrypt_production
+        protocols "h1" "h2" "h3"
+
+        proxy "http://127.0.0.1:2586"
+
+        // Redirect HTTP to HTTPS, but only for GET topic addresses, since we want
+        // it to work with curl without the annoying https:// prefix
+
+        no_redirect_to_https #true
+
+        condition "is_get_topic" {
+            is_equal "{method}" "GET"
+            is_regex "{path}" "^/([-_a-z0-9]{0,64}$|docs/|static/)"
+        }
+
+        if "is_get_topic" {
+              no_redirect_to_https #false
+        }
+    }
+    ```
 
 ## Firebase (FCM)
 !!! info

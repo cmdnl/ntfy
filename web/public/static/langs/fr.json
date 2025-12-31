@@ -64,7 +64,7 @@
     "notifications_actions_not_supported": "Cette action n'est pas supportée dans l'application web",
     "notifications_actions_http_request_title": "Envoyer une requête HTTP {{method}} à {{url}}",
     "publish_dialog_attachment_limits_quota_reached": "quota dépassé, {{remainingBytes}} restants",
-    "publish_dialog_tags_placeholder": "Liste séparée par des virgules d'étiquettes, par ex. avertissement,backup-srv1",
+    "publish_dialog_tags_placeholder": "Liste d'étiquettes séparée par des virgules, par ex. avertissement,backup-srv1",
     "publish_dialog_priority_label": "Priorité",
     "publish_dialog_click_label": "URL du clic",
     "publish_dialog_click_placeholder": "URL ouverte lors d'un clic sur la notification",
@@ -403,5 +403,7 @@
     "web_push_subscription_expiring_title": "Les notifications seront suspendues",
     "web_push_subscription_expiring_body": "Ouvrez ntfy pour continuer à recevoir les notifications",
     "web_push_unknown_notification_title": "Notification inconnue reçue du serveur",
-    "web_push_unknown_notification_body": "Il est possible que vous deviez mettre à jour ntfy en ouvrant l'application web"
+    "web_push_unknown_notification_body": "Il est possible que vous deviez mettre à jour ntfy en ouvrant l'application web",
+    "account_basics_cannot_edit_or_delete_provisioned_user": "Un utilisateur provisionné ne peut pas être modifié ou supprimé",
+    "account_tokens_table_cannot_delete_or_edit_provisioned_token": "Impossible de modifier ou de supprimer le jeton provisionné"
 }

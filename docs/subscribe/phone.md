@@ -129,10 +129,11 @@ or to simply directly link to a topic from a mobile website.
 
 **Supported link formats:**
 
-| Link format                                                                   | Example                                   | Description                                                                                                                                                                                         |
-|-------------------------------------------------------------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| <span style="white-space: nowrap">`ntfy://<host>/<topic>`</span>              | `ntfy://ntfy.sh/mytopic`                  | Directly opens the Android app detail view for the given topic and server. Subscribes to the topic if not already subscribed. This is equivalent to the web view `https://ntfy.sh/mytopic` (HTTPS!) |
-| <span style="white-space: nowrap">`ntfy://<host>/<topic>?secure=false`</span> | `ntfy://example.com/mytopic?secure=false` | Same as above, except that this will use HTTP instead of HTTPS as topic URL. This is equivalent to the web view `http://example.com/mytopic` (HTTP!)                                                |
+| Link format                                                                     | Example                                   | Description                                                                                                                                                                                         |
+|---------------------------------------------------------------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| <span style="white-space: nowrap">`ntfy://<host>/<topic>`</span>                | `ntfy://ntfy.sh/mytopic`                  | Directly opens the Android app detail view for the given topic and server. Subscribes to the topic if not already subscribed. This is equivalent to the web view `https://ntfy.sh/mytopic` (HTTPS!) |
+| <span style="white-space: nowrap">`ntfy://<host>/<topic>?display=<name>`</span> | `ntfy://ntfy.sh/mytopic?display=My+Topic` | Same as above, but also defines a display name for the topic.                                                                                                                                       |
+| <span style="white-space: nowrap">`ntfy://<host>/<topic>?secure=false`</span>   | `ntfy://example.com/mytopic?secure=false` | Same as above, except that this will use HTTP instead of HTTPS as topic URL. This is equivalent to the web view `http://example.com/mytopic` (HTTP!)                                                |
 
 ## Integrations
 
