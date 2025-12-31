@@ -3,7 +3,6 @@ package user
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 	"heckel.io/ntfy/v2/log"
@@ -104,8 +103,7 @@ const (
 
 // newPgManager creates a new PostgreSQL-backed user manager
 func newPgManager(config *Config) (*Manager, error) {
-	connStr := strings.TrimPrefix(config.Filename, "postgres:")
-	db, err := sql.Open("pgx", connStr)
+	db, err := sql.Open("pgx", config.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -175,4 +173,3 @@ func setupNewPgDB(db *sql.DB) error {
 	}
 	return nil
 }
-
