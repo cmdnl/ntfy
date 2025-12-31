@@ -249,7 +249,7 @@ func createMessageCache(conf *Config) (MessageCache, error) {
 	if conf.CacheDuration == 0 {
 		return newNopCache()
 	} else if isPostgres(conf.CacheFile) {
-		return newPgCache(strings.TrimPrefix(conf.CacheFile, "postgres:"), conf.CacheStartupQueries, conf.CacheBatchSize, conf.CacheBatchTimeout)
+		return newPgCache(conf.CacheFile, conf.CacheStartupQueries, conf.CacheBatchSize, conf.CacheBatchTimeout)
 	} else if conf.CacheFile != "" {
 		return newSqliteCache(conf.CacheFile, conf.CacheStartupQueries, conf.CacheDuration, conf.CacheBatchSize, conf.CacheBatchTimeout, false)
 	}

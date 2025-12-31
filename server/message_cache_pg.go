@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 
 	"heckel.io/ntfy/v2/util"
 )
@@ -139,7 +139,7 @@ var _ MessageCache = (*pgMessageCache)(nil)
 
 // newPgCache creates a PostgreSQL-backed message cache
 func newPgCache(connectionString, startupQueries string, batchSize int, batchTimeout time.Duration) (*pgMessageCache, error) {
-	db, err := sql.Open("postgres", connectionString)
+	db, err := sql.Open("pgx", connectionString)
 	if err != nil {
 		return nil, err
 	}
@@ -191,4 +191,3 @@ func setupNewPgCacheDB(db *sql.DB) error {
 func isPostgres(connectionString string) bool {
 	return strings.HasPrefix(connectionString, "postgres:")
 }
-

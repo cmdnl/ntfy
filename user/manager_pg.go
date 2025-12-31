@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 	"heckel.io/ntfy/v2/log"
 )
 
@@ -105,7 +105,7 @@ const (
 // newPgManager creates a new PostgreSQL-backed user manager
 func newPgManager(config *Config) (*Manager, error) {
 	connStr := strings.TrimPrefix(config.Filename, "postgres:")
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		return nil, err
 	}

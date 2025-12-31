@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
 
 // PostgreSQL-specific queries
@@ -75,7 +75,7 @@ var pgWebPushQueries = &webPushQueries{
 }
 
 func newPgWebPushStore(connStr, startupQueries string) (*webPushStore, error) {
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		return nil, err
 	}
