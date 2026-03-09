@@ -321,7 +321,7 @@ const NotificationItem = (props) => {
             {formatTitle(notification)}
           </Typography>
         )}
-        <Typography variant="body1" sx={{ whiteSpace: "pre-line", overflowX: "auto" }}>
+        <Typography variant="body1" sx={{ whiteSpace: "pre-line", overflowWrap: "break-word", wordBreak: "break-word" }}>
           <NotificationBody notification={notification} />
           {maybeActionErrors(notification)}
         </Typography>
