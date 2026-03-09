@@ -286,9 +286,8 @@ const NotificationItem = (props) => {
             alt=""
             sx={{
               float: "right",
-              width: 64,
-              height: 64,
-              objectFit: "cover",
+              maxWidth: 120,
+              maxHeight: 80,
               borderRadius: "4px",
               marginLeft: 1.5,
               marginBottom: 0.5,
