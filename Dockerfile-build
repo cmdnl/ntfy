@@ -33,15 +33,20 @@ RUN make web-deps
 ADD ./web ./web
 RUN make web-build
 
-# cli & server
+# cli & server — copy all Go source directories
 ADD go.mod go.sum main.go ./
+ADD ./assets ./assets
 ADD ./client ./client
 ADD ./cmd ./cmd
+ADD ./db ./db
 ADD ./log ./log
+ADD ./message ./message
+ADD ./model ./model
+ADD ./payments ./payments
 ADD ./server ./server
 ADD ./user ./user
 ADD ./util ./util
-ADD ./payments ./payments
+ADD ./webpush ./webpush
 RUN make VERSION=$VERSION COMMIT=$COMMIT cli-linux-server
 
 FROM alpine
