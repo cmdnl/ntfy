@@ -309,6 +309,23 @@ const NotificationItem = (props) => {
           <NotificationBody notification={notification} />
           {maybeActionErrors(notification)}
         </Typography>
+        {notification.icon && !isImage(attachment) && (
+          <Box
+            component="img"
+            src={notification.icon}
+            loading="lazy"
+            alt=""
+            sx={{
+              marginTop: 2,
+              marginBottom: 1,
+              borderRadius: "4px",
+              boxShadow: 2,
+              width: 1,
+              maxHeight: "300px",
+              objectFit: "cover",
+            }}
+          />
+        )}
         {attachment && <Attachment attachment={attachment} />}
         {tags && (
           <Typography sx={{ fontSize: 14 }} color="text.secondary">

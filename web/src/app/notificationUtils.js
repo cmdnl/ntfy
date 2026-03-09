@@ -69,7 +69,7 @@ export const toNotificationParams = ({ message, defaultTitle, topicRoute, baseUr
     {
       body: formatMessage(message),
       badge,
-      icon,
+      icon: message.icon || icon,
       image,
       timestamp: message.time * 1000,
       tag, // Scoped by baseUrl/topic/sequenceId to avoid cross-topic collisions

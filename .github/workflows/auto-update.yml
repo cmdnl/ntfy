@@ -1,0 +1,81 @@
+name: Auto-merge upstream
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  merge-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream tags
+        run: |
+          git remote add upstream https://github.com/binwiederhier/ntfy.git || true
+          git fetch upstream --tags
+
+      - name: Check for new version
+        id: check
+        run: |
+          # Get latest upstream tag
+          LATEST=$(git tag --sort=-v:refname | grep '^v' | head -1)
+          # Check if we already have this merged
+          if git merge-base --is-ancestor "$LATEST" HEAD 2>/dev/null; then
+            echo "Already up to date with $LATEST"
+            echo "new_version=false" >> $GITHUB_OUTPUT
+          else
+            echo "New version found: $LATEST"
+            echo "new_version=true" >> $GITHUB_OUTPUT
+            echo "tag=$LATEST" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Merge upstream
+        if: steps.check.outputs.new_version == 'true'
+        id: merge
+        run: |
+          TAG="${{ steps.check.outputs.tag }}"
+          echo "Merging $TAG..."
+          if git merge "$TAG" --no-edit -m "Merge upstream $TAG"; then
+            echo "success=true" >> $GITHUB_OUTPUT
+            git push origin main
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            git merge --abort
+          fi
+
+      - name: Notify on failure
+        if: steps.merge.outputs.success == 'false'
+        run: |
+          TAG="${{ steps.check.outputs.tag }}"
+          curl -s \
+            -H "Authorization: Bearer tk_ovqik09v1allwb8035j2jcemdfq54" \
+            -H "Title: ntfy fork merge failed" \
+            -H "Priority: high" \
+            -H "Tags: warning" \
+            -d "Failed to auto-merge upstream $TAG into cmdnl/ntfy. Manual fix needed." \
+            https://ntfy.flowstateagency.com/claude-notifications
+
+      - name: Notify on success
+        if: steps.check.outputs.new_version == 'true' && steps.merge.outputs.success == 'true'
+        run: |
+          TAG="${{ steps.check.outputs.tag }}"
+          curl -s \
+            -H "Authorization: Bearer tk_ovqik09v1allwb8035j2jcemdfq54" \
+            -H "Title: ntfy fork updated" \
+            -H "Tags: white_check_mark" \
+            -d "Auto-merged upstream $TAG. Docker image building now." \
+            https://ntfy.flowstateagency.com/claude-notifications
