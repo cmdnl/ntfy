@@ -278,6 +278,23 @@ const NotificationItem = (props) => {
             </IconButton>
           </Tooltip>
         )}
+        {notification.icon && !isImage(attachment) && (
+          <Box
+            component="img"
+            src={notification.icon}
+            loading="lazy"
+            alt=""
+            sx={{
+              float: "right",
+              width: 64,
+              height: 64,
+              objectFit: "cover",
+              borderRadius: "4px",
+              marginLeft: 1.5,
+              marginBottom: 0.5,
+            }}
+          />
+        )}
         <Typography sx={{ fontSize: 14 }} color="text.secondary">
           {date}
           {[1, 2, 4, 5].includes(notification.priority) && (
@@ -309,23 +326,6 @@ const NotificationItem = (props) => {
           <NotificationBody notification={notification} />
           {maybeActionErrors(notification)}
         </Typography>
-        {notification.icon && !isImage(attachment) && (
-          <Box
-            component="img"
-            src={notification.icon}
-            loading="lazy"
-            alt=""
-            sx={{
-              marginTop: 2,
-              marginBottom: 1,
-              borderRadius: "4px",
-              boxShadow: 2,
-              width: 1,
-              maxHeight: "300px",
-              objectFit: "cover",
-            }}
-          />
-        )}
         {attachment && <Attachment attachment={attachment} />}
         {tags && (
           <Typography sx={{ fontSize: 14 }} color="text.secondary">
