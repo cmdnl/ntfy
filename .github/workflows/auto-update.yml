@@ -67,7 +67,7 @@ jobs:
             -H "Priority: high" \
             -H "Tags: warning" \
             -d "Failed to auto-merge upstream $TAG into cmdnl/ntfy. Manual fix needed." \
-            https://ntfy.flowstateagency.com/julian
+            https://ntfy.flowstateagency.com/Julian
 
       - name: Notify on success
         if: steps.check.outputs.new_version == 'true' && steps.merge.outputs.success == 'true'
@@ -78,4 +78,4 @@ jobs:
             -H "Title: ntfy fork updated" \
             -H "Tags: white_check_mark" \
             -d "Auto-merged upstream $TAG. Docker image building now." \
-            https://ntfy.flowstateagency.com/julian
+            https://ntfy.flowstateagency.com/Julian
