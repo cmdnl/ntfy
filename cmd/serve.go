@@ -40,6 +40,7 @@ var flagsServe = append(
 	altsrc.NewStringFlag(&cli.StringFlag{Name: "cert-file", Aliases: []string{"cert_file", "E"}, EnvVars: []string{"NTFY_CERT_FILE"}, Usage: "certificate file, if listen-https is set"}),
 	altsrc.NewStringFlag(&cli.StringFlag{Name: "firebase-key-file", Aliases: []string{"firebase_key_file", "F"}, EnvVars: []string{"NTFY_FIREBASE_KEY_FILE"}, Usage: "Firebase credentials file; if set additionally publish to FCM topic"}),
 	altsrc.NewStringFlag(&cli.StringFlag{Name: "database-url", Aliases: []string{"database_url"}, EnvVars: []string{"NTFY_DATABASE_URL"}, Usage: "PostgreSQL connection string for database-backed stores (e.g. postgres://user:pass@host:5432/ntfy)"}),
+	altsrc.NewStringSliceFlag(&cli.StringSliceFlag{Name: "database-replica-urls", Aliases: []string{"database_replica_urls"}, EnvVars: []string{"NTFY_DATABASE_REPLICA_URLS"}, Usage: "PostgreSQL read replica connection strings for offloading read queries"}),
 	altsrc.NewStringFlag(&cli.StringFlag{Name: "cache-file", Aliases: []string{"cache_file", "C"}, EnvVars: []string{"NTFY_CACHE_FILE"}, Usage: "cache file used for message caching"}),
 	altsrc.NewStringFlag(&cli.StringFlag{Name: "cache-duration", Aliases: []string{"cache_duration", "b"}, EnvVars: []string{"NTFY_CACHE_DURATION"}, Value: util.FormatDuration(server.DefaultCacheDuration), Usage: "buffer messages for this time to allow `since` requests"}),
 	altsrc.NewIntFlag(&cli.IntFlag{Name: "cache-batch-size", Aliases: []string{"cache_batch_size"}, EnvVars: []string{"NTFY_BATCH_SIZE"}, Usage: "max size of messages to batch together when writing to message cache (if zero, writes are synchronous)"}),
@@ -145,6 +146,7 @@ func execServe(c *cli.Context) error {
 	certFile := c.String("cert-file")
 	firebaseKeyFile := c.String("firebase-key-file")
 	databaseURL := c.String("database-url")
+	databaseReplicaURLs := c.StringSlice("database-replica-urls")
 	webPushPrivateKey := c.String("web-push-private-key")
 	webPushPublicKey := c.String("web-push-public-key")
 	webPushFile := c.String("web-push-file")
@@ -282,8 +284,12 @@ func execServe(c *cli.Context) error {
 	}
 
 	// Check values
-	if databaseURL != "" && (authFile != "" || cacheFile != "" || webPushFile != "") {
+	if databaseURL != "" && !strings.HasPrefix(databaseURL, "postgres://") && !strings.HasPrefix(databaseURL, "postgresql://") {
+		return errors.New("if database-url is set, it must start with postgres:// or postgresql://")
+	} else if databaseURL != "" && (authFile != "" || cacheFile != "" || webPushFile != "") {
 		return errors.New("if database-url is set, auth-file, cache-file, and web-push-file must not be set")
+	} else if len(databaseReplicaURLs) > 0 && databaseURL == "" {
+		return errors.New("database-replica-urls can only be used if database-url is also set")
 	} else if firebaseKeyFile != "" && !util.FileExists(firebaseKeyFile) {
 		return errors.New("if set, FCM key file must exist")
 	} else if firebaseKeyFile != "" && !server.FirebaseAvailable {
@@ -502,6 +508,7 @@ func execServe(c *cli.Context) error {
 	conf.MetricsListenHTTP = metricsListenHTTP
 	conf.ProfileListenHTTP = profileListenHTTP
 	conf.DatabaseURL = databaseURL
+	conf.DatabaseReplicaURLs = databaseReplicaURLs
 	conf.WebPushPrivateKey = webPushPrivateKey
 	conf.WebPushPublicKey = webPushPublicKey
 	conf.WebPushFile = webPushFile

@@ -73,12 +73,12 @@ const (
 )
 
 // NewPostgresStore creates a new PostgreSQL-backed web push store using an existing database connection pool.
-func NewPostgresStore(db *sql.DB) (*Store, error) {
-	if err := setupPostgres(db); err != nil {
+func NewPostgresStore(d *db.DB) (*Store, error) {
+	if err := setupPostgres(d.Primary()); err != nil {
 		return nil, err
 	}
 	return &Store{
-		db: db,
+		db: d,
 		queries: queries{
 			selectSubscriptionIDByEndpoint:             postgresSelectSubscriptionIDByEndpointQuery,
 			selectSubscriptionCountBySubscriberIP:      postgresSelectSubscriptionCountBySubscriberIPQuery,
@@ -97,11 +97,11 @@ func NewPostgresStore(db *sql.DB) (*Store, error) {
 	}, nil
 }
 
-func setupPostgres(db *sql.DB) error {
+func setupPostgres(d *sql.DB) error {
 	var schemaVersion int
-	err := db.QueryRow(postgresSelectSchemaVersionQuery).Scan(&schemaVersion)
+	err := d.QueryRow(postgresSelectSchemaVersionQuery).Scan(&schemaVersion)
 	if err != nil {
-		return setupNewPostgres(db)
+		return setupNewPostgres(d)
 	}
 	if schemaVersion > pgCurrentSchemaVersion {
 		return fmt.Errorf("unexpected schema version: version %d is higher than current version %d", schemaVersion, pgCurrentSchemaVersion)
@@ -109,8 +109,8 @@ func setupPostgres(db *sql.DB) error {
 	return nil
 }
 
-func setupNewPostgres(sqlDB *sql.DB) error {
-	return db.ExecTx(sqlDB, func(tx *sql.Tx) error {
+func setupNewPostgres(d *sql.DB) error {
+	return db.ExecTx(d, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(postgresCreateTablesQuery); err != nil {
 			return err
 		}

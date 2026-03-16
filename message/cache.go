@@ -50,14 +50,14 @@ type queries struct {
 
 // Cache stores published messages
 type Cache struct {
-	db      *sql.DB
+	db      *db.DB
 	queue   *util.BatchingQueue[*model.Message]
 	nop     bool
 	mu      *sync.Mutex // nil for PostgreSQL (concurrent writes supported), set for SQLite (single writer)
 	queries queries
 }
 
-func newCache(db *sql.DB, queries queries, mu *sync.Mutex, batchSize int, batchTimeout time.Duration, nop bool) *Cache {
+func newCache(db *db.DB, queries queries, mu *sync.Mutex, batchSize int, batchTimeout time.Duration, nop bool) *Cache {
 	var queue *util.BatchingQueue[*model.Message]
 	if batchSize > 0 || batchTimeout > 0 {
 		queue = util.NewBatchingQueue[*model.Message](batchSize, batchTimeout)
@@ -125,16 +125,16 @@ func (c *Cache) addMessages(ms []*model.Message) error {
 			return model.ErrUnexpectedMessageType
 		}
 		published := m.Time <= time.Now().Unix()
-		tags := strings.Join(m.Tags, ",")
+		tags := util.SanitizeUTF8(strings.Join(m.Tags, ","))
 		var attachmentName, attachmentType, attachmentURL string
 		var attachmentSize, attachmentExpires int64
 		var attachmentDeleted bool
 		if m.Attachment != nil {
-			attachmentName = m.Attachment.Name
-			attachmentType = m.Attachment.Type
+			attachmentName = util.SanitizeUTF8(m.Attachment.Name)
+			attachmentType = util.SanitizeUTF8(m.Attachment.Type)
 			attachmentSize = m.Attachment.Size
 			attachmentExpires = m.Attachment.Expires
-			attachmentURL = m.Attachment.URL
+			attachmentURL = util.SanitizeUTF8(m.Attachment.URL)
 		}
 		var actionsStr string
 		if len(m.Actions) > 0 {
@@ -154,13 +154,13 @@ func (c *Cache) addMessages(ms []*model.Message) error {
 			m.Time,
 			m.Event,
 			m.Expires,
-			m.Topic,
-			m.Message,
-			m.Title,
+			util.SanitizeUTF8(m.Topic),
+			util.SanitizeUTF8(m.Message),
+			util.SanitizeUTF8(m.Title),
 			m.Priority,
 			tags,
-			m.Click,
-			m.Icon,
+			util.SanitizeUTF8(m.Click),
+			util.SanitizeUTF8(m.Icon),
 			actionsStr,
 			attachmentName,
 			attachmentType,
@@ -170,7 +170,7 @@ func (c *Cache) addMessages(ms []*model.Message) error {
 			attachmentDeleted, // Always zero
 			sender,
 			m.User,
-			m.ContentType,
+			util.SanitizeUTF8(m.ContentType),
 			m.Encoding,
 			published,
 		)
@@ -201,10 +201,11 @@ func (c *Cache) Messages(topic string, since model.SinceMarker, scheduled bool) 
 func (c *Cache) messagesSinceTime(topic string, since model.SinceMarker, scheduled bool) ([]*model.Message, error) {
 	var rows *sql.Rows
 	var err error
+	rdb := c.db.ReadOnly()
 	if scheduled {
-		rows, err = c.db.Query(c.queries.selectMessagesSinceTimeScheduled, topic, since.Time().Unix())
+		rows, err = rdb.Query(c.queries.selectMessagesSinceTimeScheduled, topic, since.Time().Unix())
 	} else {
-		rows, err = c.db.Query(c.queries.selectMessagesSinceTime, topic, since.Time().Unix())
+		rows, err = rdb.Query(c.queries.selectMessagesSinceTime, topic, since.Time().Unix())
 	}
 	if err != nil {
 		return nil, err
@@ -215,10 +216,11 @@ func (c *Cache) messagesSinceTime(topic string, since model.SinceMarker, schedul
 func (c *Cache) messagesSinceID(topic string, since model.SinceMarker, scheduled bool) ([]*model.Message, error) {
 	var rows *sql.Rows
 	var err error
+	rdb := c.db.ReadOnly()
 	if scheduled {
-		rows, err = c.db.Query(c.queries.selectMessagesSinceIDScheduled, topic, since.ID())
+		rows, err = rdb.Query(c.queries.selectMessagesSinceIDScheduled, topic, since.ID())
 	} else {
-		rows, err = c.db.Query(c.queries.selectMessagesSinceID, topic, since.ID())
+		rows, err = rdb.Query(c.queries.selectMessagesSinceID, topic, since.ID())
 	}
 	if err != nil {
 		return nil, err
@@ -227,7 +229,7 @@ func (c *Cache) messagesSinceID(topic string, since model.SinceMarker, scheduled
 }
 
 func (c *Cache) messagesLatest(topic string) ([]*model.Message, error) {
-	rows, err := c.db.Query(c.queries.selectMessagesLatest, topic)
+	rows, err := c.db.ReadOnly().Query(c.queries.selectMessagesLatest, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +268,7 @@ func (c *Cache) MessagesExpired() ([]string, error) {
 
 // Message returns the message with the given ID, or ErrMessageNotFound if not found
 func (c *Cache) Message(id string) (*model.Message, error) {
-	rows, err := c.db.Query(c.queries.selectMessagesByID, id)
+	rows, err := c.db.ReadOnly().Query(c.queries.selectMessagesByID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +297,7 @@ func (c *Cache) MarkPublished(m *model.Message) error {
 
 // MessagesCount returns the total number of messages in the cache
 func (c *Cache) MessagesCount() (int, error) {
-	rows, err := c.db.Query(c.queries.selectMessagesCount)
+	rows, err := c.db.ReadOnly().Query(c.queries.selectMessagesCount)
 	if err != nil {
 		return 0, err
 	}
@@ -312,7 +314,7 @@ func (c *Cache) MessagesCount() (int, error) {
 
 // Topics returns a list of all topics with messages in the cache
 func (c *Cache) Topics() ([]string, error) {
-	rows, err := c.db.Query(c.queries.selectTopics)
+	rows, err := c.db.ReadOnly().Query(c.queries.selectTopics)
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +428,7 @@ func (c *Cache) MarkAttachmentsDeleted(ids ...string) error {
 
 // AttachmentBytesUsedBySender returns the total size of active attachments sent by the given sender
 func (c *Cache) AttachmentBytesUsedBySender(sender string) (int64, error) {
-	rows, err := c.db.Query(c.queries.selectAttachmentsSizeBySender, sender, time.Now().Unix())
+	rows, err := c.db.ReadOnly().Query(c.queries.selectAttachmentsSizeBySender, sender, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -435,7 +437,7 @@ func (c *Cache) AttachmentBytesUsedBySender(sender string) (int64, error) {
 
 // AttachmentBytesUsedByUser returns the total size of active attachments for the given user
 func (c *Cache) AttachmentBytesUsedByUser(userID string) (int64, error) {
-	rows, err := c.db.Query(c.queries.selectAttachmentsSizeByUserID, userID, time.Now().Unix())
+	rows, err := c.db.ReadOnly().Query(c.queries.selectAttachmentsSizeByUserID, userID, time.Now().Unix())
 	if err != nil {
 		return 0, err
 	}
@@ -466,7 +468,7 @@ func (c *Cache) UpdateStats(messages int64) error {
 
 // Stats returns the total message count statistic
 func (c *Cache) Stats() (messages int64, err error) {
-	rows, err := c.db.Query(c.queries.selectStats)
+	rows, err := c.db.ReadOnly().Query(c.queries.selectStats)
 	if err != nil {
 		return 0, err
 	}

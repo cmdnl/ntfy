@@ -827,3 +827,141 @@ func TestStore_MessageFieldRoundTrip(t *testing.T) {
 		require.Equal(t, `{"key":"value"}`, retrieved.Actions[1].Body)
 	})
 }
+
+func TestStore_AddMessage_InvalidUTF8(t *testing.T) {
+	forEachBackend(t, func(t *testing.T, s *message.Cache) {
+		// 0xc9 0x43: Latin-1 "ÉC" — 0xc9 starts a 2-byte UTF-8 sequence but 0x43 ('C') is not a continuation byte
+		m := model.NewDefaultMessage("mytopic", "\xc9Cas du serveur")
+		require.Nil(t, s.AddMessage(m))
+		messages, err := s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, 1, len(messages))
+		require.Equal(t, "\uFFFDCas du serveur", messages[0].Message)
+
+		// 0xae: Latin-1 "®" — isolated byte above 0x7F, not a valid UTF-8 start for single byte
+		m2 := model.NewDefaultMessage("mytopic", "Product\xae Pro")
+		require.Nil(t, s.AddMessage(m2))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "Product\uFFFD Pro", messages[1].Message)
+
+		// 0xe8 0x6d 0x65: Latin-1 "ème" — 0xe8 starts a 3-byte UTF-8 sequence but 0x6d ('m') is not a continuation byte
+		m3 := model.NewDefaultMessage("mytopic", "probl\xe8me critique")
+		require.Nil(t, s.AddMessage(m3))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "probl\uFFFDme critique", messages[2].Message)
+
+		// 0xb2: Latin-1 "²" — isolated byte in 0x80-0xBF range (UTF-8 continuation byte without lead)
+		m4 := model.NewDefaultMessage("mytopic", "CO\xb2 level high")
+		require.Nil(t, s.AddMessage(m4))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "CO\uFFFD level high", messages[3].Message)
+
+		// 0xe9 0x6d 0x61: Latin-1 "éma" — 0xe9 starts a 3-byte UTF-8 sequence but 0x6d ('m') is not a continuation byte
+		m5 := model.NewDefaultMessage("mytopic", "th\xe9matique")
+		require.Nil(t, s.AddMessage(m5))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "th\uFFFDmatique", messages[4].Message)
+
+		// 0xed 0x64 0x65: Latin-1 "íde" — 0xed starts a 3-byte UTF-8 sequence but 0x64 ('d') is not a continuation byte
+		m6 := model.NewDefaultMessage("mytopic", "vid\xed\x64eo surveillance")
+		require.Nil(t, s.AddMessage(m6))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "vid\uFFFDdeo surveillance", messages[5].Message)
+
+		// 0xf3 0x6e 0x3a 0x20: Latin-1 "ón: " — 0xf3 starts a 4-byte UTF-8 sequence but 0x6e ('n') is not a continuation byte
+		m7 := model.NewDefaultMessage("mytopic", "notificaci\xf3n: alerta")
+		require.Nil(t, s.AddMessage(m7))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "notificaci\uFFFDn: alerta", messages[6].Message)
+
+		// 0xb7: Latin-1 "·" — isolated continuation byte
+		m8 := model.NewDefaultMessage("mytopic", "item\xb7value")
+		require.Nil(t, s.AddMessage(m8))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "item\uFFFDvalue", messages[7].Message)
+
+		// 0xa8: Latin-1 "¨" — isolated continuation byte
+		m9 := model.NewDefaultMessage("mytopic", "na\xa8ve")
+		require.Nil(t, s.AddMessage(m9))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "na\uFFFDve", messages[8].Message)
+
+		// 0xdf 0x64: Latin-1 "ßd" — 0xdf starts a 2-byte UTF-8 sequence but 0x64 ('d') is not a continuation byte
+		m10 := model.NewDefaultMessage("mytopic", "gro\xdf\x64ruck")
+		require.Nil(t, s.AddMessage(m10))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "gro\uFFFDdruck", messages[9].Message)
+
+		// 0xe4 0x67 0x74: Latin-1 "ägt" — 0xe4 starts a 3-byte UTF-8 sequence but 0x67 ('g') is not a continuation byte
+		m11 := model.NewDefaultMessage("mytopic", "tr\xe4gt Last")
+		require.Nil(t, s.AddMessage(m11))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "tr\uFFFDgt Last", messages[10].Message)
+
+		// 0xe9 0x65 0x20: Latin-1 "ée " — 0xe9 starts a 3-byte UTF-8 sequence but 0x65 ('e') is not a continuation byte
+		m12 := model.NewDefaultMessage("mytopic", "journ\xe9\x65 termin\xe9\x65")
+		require.Nil(t, s.AddMessage(m12))
+		messages, err = s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, "journ\uFFFDe termin\uFFFDe", messages[11].Message)
+	})
+}
+
+func TestStore_AddMessage_NullByte(t *testing.T) {
+	forEachBackend(t, func(t *testing.T, s *message.Cache) {
+		// 0x00: NUL byte — valid UTF-8 but rejected by PostgreSQL
+		m := model.NewDefaultMessage("mytopic", "hello\x00world")
+		require.Nil(t, s.AddMessage(m))
+
+		messages, err := s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, 1, len(messages))
+		require.Equal(t, "helloworld", messages[0].Message)
+	})
+}
+
+func TestStore_AddMessage_InvalidUTF8InTitleAndTags(t *testing.T) {
+	forEachBackend(t, func(t *testing.T, s *message.Cache) {
+		// Invalid UTF-8 can arrive via HTTP headers (Title, Tags) which bypass body validation
+		m := model.NewDefaultMessage("mytopic", "valid message")
+		m.Title = "\xc9clipse du syst\xe8me"
+		m.Tags = []string{"probl\xe8me", "syst\xe9me"}
+		m.Click = "https://example.com/\xae"
+		require.Nil(t, s.AddMessage(m))
+
+		messages, err := s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, 1, len(messages))
+		require.Equal(t, "\uFFFDclipse du syst\uFFFDme", messages[0].Title)
+		require.Equal(t, "probl\uFFFDme", messages[0].Tags[0])
+		require.Equal(t, "syst\uFFFDme", messages[0].Tags[1])
+		require.Equal(t, "https://example.com/\uFFFD", messages[0].Click)
+	})
+}
+
+func TestStore_AddMessage_InvalidUTF8BatchDoesNotDropValidMessages(t *testing.T) {
+	forEachBackend(t, func(t *testing.T, s *message.Cache) {
+		// Previously, a single invalid message would roll back the entire batch transaction.
+		// Sanitization ensures all messages in a batch are written successfully.
+		msgs := []*model.Message{
+			model.NewDefaultMessage("mytopic", "valid message 1"),
+			model.NewDefaultMessage("mytopic", "notificaci\xf3n: alerta"),
+			model.NewDefaultMessage("mytopic", "valid message 3"),
+		}
+		require.Nil(t, s.AddMessages(msgs))
+
+		messages, err := s.Messages("mytopic", model.SinceAllMessages, false)
+		require.Nil(t, err)
+		require.Equal(t, 3, len(messages))
+	})
+}

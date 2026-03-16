@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
+	"heckel.io/ntfy/v2/db"
 	"heckel.io/ntfy/v2/db/pg"
 	dbtest "heckel.io/ntfy/v2/db/test"
 	"heckel.io/ntfy/v2/util"
@@ -36,9 +37,9 @@ func forEachBackend(t *testing.T, f func(t *testing.T, newManager newManagerFunc
 	t.Run("postgres", func(t *testing.T) {
 		schemaDSN := dbtest.CreateTestPostgresSchema(t)
 		f(t, func(config *Config) *Manager {
-			pool, err := pg.Open(schemaDSN)
+			host, err := pg.Open(schemaDSN)
 			require.Nil(t, err)
-			a, err := NewPostgresManager(pool, config)
+			a, err := NewPostgresManager(db.New(host, nil), config)
 			require.Nil(t, err)
 			return a
 		})
@@ -1734,8 +1735,8 @@ func TestMigrationFrom4(t *testing.T) {
 	require.Nil(t, a.Authorize(nil, "up", PermissionRead)) // % matches 0 or more characters
 }
 
-func checkSchemaVersion(t *testing.T, db *sql.DB) {
-	rows, err := db.Query(`SELECT version FROM schemaVersion`)
+func checkSchemaVersion(t *testing.T, d *db.DB) {
+	rows, err := d.Query(`SELECT version FROM schemaVersion`)
 	require.Nil(t, err)
 	require.True(t, rows.Next())
 
@@ -1771,7 +1772,7 @@ func newTestManagerFromConfig(t *testing.T, newManager newManagerFunc, conf *Con
 	return a
 }
 
-func testDB(a *Manager) *sql.DB {
+func testDB(a *Manager) *db.DB {
 	return a.db
 }
 

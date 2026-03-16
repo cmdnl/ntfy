@@ -24,7 +24,7 @@ var (
 
 // Store holds the database connection and queries for web push subscriptions.
 type Store struct {
-	db      *sql.DB
+	db      *db.DB
 	queries queries
 }
 
@@ -83,7 +83,7 @@ func (s *Store) UpsertSubscription(endpoint string, auth, p256dh, userID string,
 
 // SubscriptionsForTopic returns all subscriptions for the given topic.
 func (s *Store) SubscriptionsForTopic(topic string) ([]*Subscription, error) {
-	rows, err := s.db.Query(s.queries.selectSubscriptionsForTopic, topic)
+	rows, err := s.db.ReadOnly().Query(s.queries.selectSubscriptionsForTopic, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (s *Store) SubscriptionsForTopic(topic string) ([]*Subscription, error) {
 
 // SubscriptionsExpiring returns all subscriptions that have not been updated for a given time period.
 func (s *Store) SubscriptionsExpiring(warnAfter time.Duration) ([]*Subscription, error) {
-	rows, err := s.db.Query(s.queries.selectSubscriptionsExpiringSoon, time.Now().Add(-warnAfter).Unix())
+	rows, err := s.db.ReadOnly().Query(s.queries.selectSubscriptionsExpiringSoon, time.Now().Add(-warnAfter).Unix())
 	if err != nil {
 		return nil, err
 	}

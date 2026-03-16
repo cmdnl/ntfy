@@ -1,8 +1,9 @@
 package message
 
 import (
-	"database/sql"
 	"time"
+
+	"heckel.io/ntfy/v2/db"
 )
 
 // PostgreSQL runtime query constants
@@ -102,9 +103,9 @@ var postgresQueries = queries{
 }
 
 // NewPostgresStore creates a new PostgreSQL-backed message cache store using an existing database connection pool.
-func NewPostgresStore(db *sql.DB, batchSize int, batchTimeout time.Duration) (*Cache, error) {
-	if err := setupPostgres(db); err != nil {
+func NewPostgresStore(d *db.DB, batchSize int, batchTimeout time.Duration) (*Cache, error) {
+	if err := setupPostgres(d.Primary()); err != nil {
 		return nil, err
 	}
-	return newCache(db, postgresQueries, nil, batchSize, batchTimeout, false), nil
+	return newCache(d, postgresQueries, nil, batchSize, batchTimeout, false), nil
 }

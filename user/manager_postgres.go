@@ -1,7 +1,7 @@
 package user
 
 import (
-	"database/sql"
+	"heckel.io/ntfy/v2/db"
 )
 
 // PostgreSQL queries
@@ -278,9 +278,9 @@ var postgresQueries = queries{
 }
 
 // NewPostgresManager creates a new Manager backed by a PostgreSQL database
-func NewPostgresManager(db *sql.DB, config *Config) (*Manager, error) {
-	if err := setupPostgres(db); err != nil {
+func NewPostgresManager(d *db.DB, config *Config) (*Manager, error) {
+	if err := setupPostgres(d.Primary()); err != nil {
 		return nil, err
 	}
-	return newManager(db, postgresQueries, config)
+	return newManager(d, postgresQueries, config)
 }

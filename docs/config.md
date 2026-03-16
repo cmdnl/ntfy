@@ -135,6 +135,268 @@ using Docker Compose (i.e. `docker-compose.yml`):
 	    command: serve
     ```
 
+## Config generator
+
+This generator helps you configure your self-hosted ntfy instance. It's not fully featured, but it is a good starting point. Please refer to the relevant sections in the doc for more details.
+
+<div style="text-align: center;">
+<button type="button" id="cg-open-btn" class="cg-open-btn">Open config generator</button>
+</div>
+
+<figure markdown style="padding-left: 50px; padding-right: 50px; cursor: pointer;" onclick="document.getElementById('cg-open-btn').click();">
+  <img src="../../static/img/config-generator.png"/>
+  <figcaption>The config generator helps you create a custom config for your self-hosted ntfy instance. Click to open.</figcaption>
+</figure>
+
+<div id="cg-modal" class="cg-modal" style="display:none">
+<div class="cg-modal-backdrop"></div>
+<div class="cg-modal-dialog">
+<div class="cg-modal-header">
+<div class="cg-modal-header-left">
+<span class="cg-modal-title">Config generator</span><span class="cg-badge-beta">BETA</span>
+<span class="cg-modal-desc">This generator helps you configure your self-hosted ntfy instance. It's not fully featured, but it is a good starting point.</span>
+</div>
+<div class="cg-modal-header-actions">
+<button type="button" id="cg-reset-btn" class="cg-modal-reset" title="Reset all values">Reset</button>
+<button type="button" id="cg-close-btn" class="cg-modal-close" title="Close">&times;</button>
+</div>
+</div>
+<div class="cg-modal-body">
+<div class="cg-mobile-toggle">
+  <button class="cg-mobile-toggle-btn active" data-show="left">Edit</button>
+  <button class="cg-mobile-toggle-btn" data-show="right">Preview</button>
+</div>
+<div id="cg-left">
+<div class="cg-nav">
+<div class="cg-nav-tab active" data-panel="cg-panel-general">General</div>
+<div class="cg-nav-tab cg-hidden" data-panel="cg-panel-database" id="cg-nav-database">Database</div>
+<div class="cg-nav-tab cg-hidden" data-panel="cg-panel-auth" id="cg-nav-auth">Users</div>
+<div class="cg-nav-tab cg-hidden" data-panel="cg-panel-cache" id="cg-nav-cache">Message Cache</div>
+<div class="cg-nav-tab cg-hidden" data-panel="cg-panel-attach" id="cg-nav-attach">Attachments</div>
+<div class="cg-nav-tab cg-hidden" data-panel="cg-panel-webpush" id="cg-nav-webpush">Web Push</div>
+<div class="cg-nav-tab cg-hidden" data-panel="cg-panel-email" id="cg-nav-email">Email</div>
+</div>
+<div class="cg-panels">
+<div class="cg-panel active" id="cg-panel-general">
+<div class="cg-field cg-inline-field">
+<label>What URL will ntfy be reachable on?</label>
+<input type="text" data-key="base-url" placeholder="https://ntfy.example.com">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Will ntfy run behind a proxy (e.g. nginx, Caddy)? <a href="/config/#behind-a-proxy-tls-etc" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-btn-group">
+<label><input type="radio" name="cg-proxy" value="no" checked><span>No</span></label>
+<label><input type="radio" name="cg-proxy" value="yes"><span>Yes</span></label>
+</div>
+</div>
+<div class="cg-field cg-inline-field">
+<label>Will this ntfy server be open or private? <a href="/config/#access-control" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-btn-group">
+<label><input type="radio" name="cg-server-type" value="open" checked><span>Open</span></label>
+<label><input type="radio" name="cg-server-type" value="private"><span>Private</span></label>
+<label><input type="radio" name="cg-server-type" value="custom"><span>Custom</span></label>
+</div>
+</div>
+<div class="cg-field cg-inline-field">
+<label>Will iOS/iPhone users use this server? <a href="/config/#ios-instant-notifications" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-btn-group">
+<label><input type="radio" name="cg-ios" value="no" checked><span>No</span></label>
+<label><input type="radio" name="cg-ios" value="yes"><span>Yes</span></label>
+</div>
+</div>
+<div class="cg-field cg-inline-field">
+<label>Do you want to use ntfy as a UnifiedPush distributor? <a href="/config/#example-unifiedpush" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-btn-group">
+<label><input type="radio" name="cg-unifiedpush" value="no" checked><span>No</span></label>
+<label><input type="radio" name="cg-unifiedpush" value="yes"><span>Yes</span></label>
+</div>
+</div>
+<div class="cg-field">
+<label>Which features do you want to enable?</label>
+<div class="cg-feature-grid">
+<div class="cg-feature-row"><label><input type="checkbox" id="cg-feat-auth"> User management and access control</label><button type="button" class="cg-btn-configure cg-hidden" data-panel="cg-panel-auth">Configure</button></div>
+<div class="cg-feature-row"><label><input type="checkbox" id="cg-feat-cache"> Persistent message cache</label><button type="button" class="cg-btn-configure cg-hidden" data-panel="cg-panel-cache">Configure</button></div>
+<div class="cg-feature-row"><label><input type="checkbox" id="cg-feat-attach"> Attachments</label><button type="button" class="cg-btn-configure cg-hidden" data-panel="cg-panel-attach">Configure</button></div>
+<div class="cg-feature-row"><label><input type="checkbox" id="cg-feat-webpush"> Web push</label><button type="button" class="cg-btn-configure cg-hidden" data-panel="cg-panel-webpush">Configure</button></div>
+<div class="cg-feature-row"><label><input type="checkbox" id="cg-feat-smtp-out"> Email notifications</label><button type="button" class="cg-btn-configure cg-hidden" data-panel="cg-panel-email">Configure</button></div>
+<div class="cg-feature-row"><label><input type="checkbox" id="cg-feat-smtp-in"> Email publishing</label><button type="button" class="cg-btn-configure cg-hidden" data-panel="cg-panel-email">Configure</button></div>
+</div>
+</div>
+<div class="cg-field cg-inline-field cg-hidden" id="cg-wizard-db">
+<label>Which database backend would you like to use? <a href="/config/#database-options" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-btn-group">
+<label><input type="radio" name="cg-db-type" value="sqlite" checked><span>SQLite</span></label>
+<label><input type="radio" name="cg-db-type" value="postgres"><span>PostgreSQL</span></label>
+</div>
+</div>
+</div>
+<div class="cg-panel" id="cg-panel-auth">
+<div class="cg-panel-desc">Configure user management, access control, and provisioned users/ACLs. See <a href="/config/#access-control" target="_blank">access control</a> for details.</div>
+<div class="cg-field cg-inline-field">
+<label>Where should the user database be stored?</label>
+<input type="text" data-key="auth-file" placeholder="/var/lib/ntfy/auth.db">
+</div>
+<div class="cg-field cg-inline-field">
+<label>What should the default access policy be? <a href="/config/#access-control" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<select id="cg-default-access-select">
+<option value="read-write" selected>Read &amp; Write</option>
+<option value="read-only">Read Only</option>
+<option value="write-only">Write Only</option>
+<option value="deny-all">Deny All</option>
+</select>
+</div>
+<div class="cg-field cg-inline-field">
+<label>Should login to the web app be enabled?</label>
+<div class="cg-btn-group">
+<label><input type="radio" name="cg-login-mode" value="disabled" checked><span>Disabled</span></label>
+<label><input type="radio" name="cg-login-mode" value="enabled"><span>Enabled</span></label>
+<label><input type="radio" name="cg-login-mode" value="required"><span>Required</span></label>
+</div>
+</div>
+<div class="cg-field cg-inline-field">
+<label>Should it be possible to sign up via the web app?</label>
+<div class="cg-btn-group">
+<label><input type="radio" name="cg-enable-signup" value="no" checked><span>No</span></label>
+<label><input type="radio" name="cg-enable-signup" value="yes"><span>Yes</span></label>
+</div>
+</div>
+<input type="hidden" data-key="auth-default-access">
+<input type="checkbox" data-key="enable-login" id="cg-enable-login-hidden" style="display:none">
+<input type="checkbox" data-key="require-login" id="cg-require-login-hidden" style="display:none">
+<input type="checkbox" data-key="enable-signup" id="cg-enable-signup-hidden" style="display:none">
+<div class="cg-field">
+<label>Provisioned users <a href="/config/#users-and-roles" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-repeatable-container" id="cg-auth-users-container"></div>
+<button type="button" class="cg-btn-add" data-add-type="user">+ Add user</button>
+</div>
+<div class="cg-field">
+<label>Provisioned ACLs <a href="/config/#access-control-list-acl" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-repeatable-container" id="cg-auth-acls-container"></div>
+<button type="button" class="cg-btn-add" data-add-type="acl">+ Add ACL</button>
+</div>
+<div class="cg-field">
+<label>Provisioned tokens <a href="/config/#access-tokens" target="_blank" class="cg-help"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></label>
+<div class="cg-repeatable-container" id="cg-auth-tokens-container"></div>
+<button type="button" class="cg-btn-add" data-add-type="token">+ Add token</button>
+</div>
+</div>
+<div class="cg-panel" id="cg-panel-cache">
+<div class="cg-panel-desc">Configure the message cache to allow devices to retrieve missed notifications. See <a href="/config/#message-cache" target="_blank">message cache</a> for details.</div>
+<div class="cg-field cg-inline-field" id="cg-cache-file-field">
+<label>Where should the cache be stored?</label>
+<input type="text" data-key="cache-file" placeholder="/var/cache/ntfy/cache.db">
+</div>
+<div class="cg-field cg-inline-field">
+<label>How long should messages be cached?</label>
+<input type="text" data-key="cache-duration" placeholder="12h">
+</div>
+</div>
+<div class="cg-panel" id="cg-panel-attach">
+<div class="cg-panel-desc">Allow users to upload and attach files to notifications. See <a href="/config/#attachments" target="_blank">attachments</a> for details.</div>
+<div class="cg-field cg-inline-field">
+<label>Where should attachments be stored?</label>
+<input type="text" data-key="attachment-cache-dir" placeholder="/var/cache/ntfy/attachments">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Max file size per attachment?</label>
+<input type="text" data-key="attachment-file-size-limit" placeholder="15M">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Total attachment storage limit?</label>
+<input type="text" data-key="attachment-total-size-limit" placeholder="5G">
+</div>
+<div class="cg-field cg-inline-field">
+<label>How long before attachments expire?</label>
+<input type="text" data-key="attachment-expiry-duration" placeholder="3h">
+</div>
+</div>
+<div class="cg-panel" id="cg-panel-webpush">
+<div class="cg-panel-desc">Enable browser push notifications via the Web Push API. VAPID keys are generated automatically. See <a href="/config/#web-push" target="_blank">web push</a> for details.</div>
+<div class="cg-field cg-inline-field">
+<label>Where should web push data be stored?</label>
+<input type="text" data-key="web-push-file" placeholder="/var/lib/ntfy/webpush.db">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Contact email address</label>
+<input type="text" data-key="web-push-email-address" placeholder="admin@example.com">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Private key</label>
+<input type="text" data-key="web-push-private-key" placeholder="Auto-generated" readonly>
+</div>
+<div class="cg-field cg-inline-field">
+<label>Public key</label>
+<input type="text" data-key="web-push-public-key" placeholder="Auto-generated" readonly>
+</div>
+<div class="cg-field cg-inline-field">
+<label></label>
+<button type="button" id="cg-regen-keys" class="cg-btn-add">Regenerate keys</button>
+</div>
+</div>
+<div class="cg-panel" id="cg-panel-email">
+<div class="cg-panel-desc">Configure outgoing email notifications and/or incoming email publishing. See <a href="/config/#e-mail-notifications" target="_blank">email notifications</a> and <a href="/config/#e-mail-publishing" target="_blank">email publishing</a> for details.</div>
+<div id="cg-email-out-section" class="cg-hidden">
+<div class="cg-field"><label><strong>Outgoing (notifications)</strong></label></div>
+<div class="cg-field cg-inline-field">
+<label>SMTP server address</label>
+<input type="text" data-key="smtp-sender-addr" placeholder="smtp.example.com:587">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Sender email</label>
+<input type="text" data-key="smtp-sender-from" placeholder="ntfy@example.com">
+</div>
+<div class="cg-field cg-inline-field">
+<label>SMTP username</label>
+<input type="text" data-key="smtp-sender-user" placeholder="Username">
+</div>
+<div class="cg-field cg-inline-field">
+<label>SMTP password</label>
+<input type="password" data-key="smtp-sender-pass" placeholder="Password">
+</div>
+</div>
+<div id="cg-email-in-section" class="cg-hidden">
+<div class="cg-field"><label><strong>Incoming (publishing)</strong></label></div>
+<div class="cg-field cg-inline-field">
+<label>Listen address</label>
+<input type="text" data-key="smtp-server-listen" placeholder=":25">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Domain</label>
+<input type="text" data-key="smtp-server-domain" placeholder="ntfy.example.com">
+</div>
+<div class="cg-field cg-inline-field">
+<label>Address prefix</label>
+<input type="text" data-key="smtp-server-addr-prefix" placeholder="ntfy-">
+</div>
+</div>
+</div>
+<div class="cg-panel" id="cg-panel-database">
+<div class="cg-panel-desc">Configure the PostgreSQL connection. See <a href="/config/#postgresql-experimental" target="_blank">PostgreSQL</a> for details.</div>
+<div class="cg-field">
+<label>Database URL</label>
+<input type="text" data-key="database-url" placeholder="postgres://user:pass@host:5432/ntfy">
+</div>
+</div>
+<input type="hidden" data-key="upstream-base-url">
+<input type="checkbox" data-key="behind-proxy" id="cg-behind-proxy" style="display:none">
+</div>
+</div>
+<div id="cg-right">
+<div class="cg-output-tabs">
+<div class="cg-output-tab active" data-format="server-yml">server.yml</div>
+<div class="cg-output-tab" data-format="docker-compose">docker-compose.yml</div>
+<div class="cg-output-tab" data-format="env-vars">Env variables</div>
+<button type="button" id="cg-copy-btn" class="cg-btn-copy" title="Copy to clipboard"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+</div>
+<div class="cg-output-wrap">
+<pre><code id="cg-code"><span class="cg-empty-msg">Configure options on the left to generate your config...</span></code></pre>
+<div id="cg-warnings" class="cg-hidden"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
 ## Database options
 ntfy uses a database for storing messages ([message cache](#message-cache)), users and [access control](#access-control), and [web push](#web-push) subscriptions.
 You can choose between **SQLite** and **PostgreSQL** as the database backend.
@@ -149,11 +411,7 @@ no external dependencies:
 
 ### PostgreSQL (EXPERIMENTAL)
 As an alternative, you can configure ntfy to use PostgreSQL for **all** database-backed stores by setting the
-`database-url` option to a PostgreSQL connection string:
-
-```yaml
-database-url: "postgres://user:pass@host:5432/ntfy"
-```
+`database-url` option to a PostgreSQL connection string.
 
 When `database-url` is set, ntfy will use PostgreSQL for the [message cache](#message-cache),
 [access control](#access-control), and [web push](#web-push) subscriptions instead of SQLite. The `cache-file`,
@@ -165,11 +423,44 @@ topics. To restrict access, set `auth-default-access` to `deny-all` (see [access
 
 You can also set this via the environment variable `NTFY_DATABASE_URL` or the command line flag `--database-url`.
 
+To offload read-heavy queries from the primary database, you can optionally configure one or more read replicas
+using the `database-replica-urls` option. When configured, non-critical read-only queries (e.g. fetching messages, checking access permissions, etc)
+are distributed across the replicas using round-robin, while all writes and correctness-critical reads continue to go
+to the primary. If a replica becomes unhealthy, ntfy automatically falls back to the primary until the replica recovers.
+You can also set this via the environment variable `NTFY_DATABASE_REPLICA_URLS` (comma-separated) or the command line
+flag `--database-replica-urls`.
+
+Examples:
+
+=== "Simple"
+    ```yaml
+    database-url: "postgres://user:pass@host:5432/ntfy"
+    ```
+    
+=== "With SSL and pool tuning"
+    ```yaml
+    database-url: "postgres://user:pass@host:5432/ntfy?sslmode=require&pool_max_conns=50&pool_conn_max_idle_time=5m"
+    ```
+    
+=== "With CA certificate"
+    ```yaml
+    database-url: "postgres://user:pass@host:25060/ntfy?sslmode=require&sslrootcert=/etc/ntfy/db-ca-cert.pem&pool_max_conns=30"
+    ```
+
+=== "With read replicas"
+    ```yaml
+    database-url: "postgres://user:pass@primary:5432/ntfy?sslmode=require&sslrootcert=/etc/ntfy/db-ca-cert.pem&pool_max_conns=30"
+    database-replica-urls:
+      - "postgres://user:pass@replica1:5432/ntfy?sslmode=require&sslrootcert=/etc/ntfy/db-ca-cert.pem&pool_max_conns=30"
+      - "postgres://user:pass@replica2:5432/ntfy?sslmode=require&sslrootcert=/etc/ntfy/db-ca-cert.pem&pool_max_conns=30"
+    ```
+
 The database URL supports the standard [PostgreSQL connection parameters](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS)
 as query parameters, such as `sslmode`, `connect_timeout`, `sslcert`, `sslkey`, `sslrootcert`, and `application_name`.
 See the [pgx driver documentation](https://pkg.go.dev/github.com/jackc/pgx/v5) for the full list of supported parameters.
 
-In addition, ntfy supports the following custom query parameters to tune the connection pool:
+In addition, ntfy supports the following custom query parameters to tune the connection pool (these apply to both
+the primary and replica URLs):
 
 | Parameter                 | Default | Description                                                                      |
 |---------------------------|---------|----------------------------------------------------------------------------------|
@@ -178,11 +469,6 @@ In addition, ntfy supports the following custom query parameters to tune the con
 | `pool_conn_max_lifetime`  | -       | Maximum amount of time a connection may be reused (Go duration, e.g. `5m`, `1h`) |
 | `pool_conn_max_idle_time` | -       | Maximum amount of time a connection may be idle (Go duration, e.g. `30s`, `5m`)  |
 
-Example:
-
-```yaml
-database-url: "postgres://user:pass@host:5432/ntfy?sslmode=require&pool_max_conns=50&pool_conn_max_idle_time=5m"
-```
 
 ## Message cache
 If desired, ntfy can temporarily keep notifications in an in-memory or an on-disk cache. Caching messages for a short period
@@ -1819,6 +2105,7 @@ variable before running the `ntfy` command (e.g. `export NTFY_LISTEN_HTTP=:80`).
 | `cert-file`                                | `NTFY_CERT_FILE`                                | *filename*                                          | -                 | HTTPS/TLS certificate file, only used if `listen-https` is set.                                                                                                                                                                 |
 | `firebase-key-file`                        | `NTFY_FIREBASE_KEY_FILE`                        | *filename*                                          | -                 | If set, also publish messages to a Firebase Cloud Messaging (FCM) topic for your app. This is optional and only required to save battery when using the Android app. See [Firebase (FCM)](#firebase-fcm).                       |
 | `database-url`                             | `NTFY_DATABASE_URL`                             | *string (connection URL)*                           | -                 | PostgreSQL connection string (e.g. `postgres://user:pass@host:5432/ntfy`). If set, uses PostgreSQL for all database-backed stores (message cache, user manager, web push) instead of SQLite. See [database options](#database-options). |
+| `database-replica-urls`                    | `NTFY_DATABASE_REPLICA_URLS`                    | *list of strings (connection URLs)*                 | -                 | PostgreSQL read replica connection strings. Non-critical read-only queries are distributed across replicas (round-robin) with automatic fallback to primary. Requires `database-url`. See [read replicas](#read-replicas). |
 | `cache-file`                               | `NTFY_CACHE_FILE`                               | *filename*                                          | -                 | If set, messages are cached in a local SQLite database instead of only in-memory. This allows for service restarts without losing messages in support of the since= parameter. See [message cache](#message-cache).             |
 | `cache-duration`                           | `NTFY_CACHE_DURATION`                           | *duration*                                          | 12h               | Duration for which messages will be buffered before they are deleted. This is required to support the `since=...` and `poll=1` parameter. Set this to `0` to disable the cache entirely.                                        |
 | `cache-startup-queries`                    | `NTFY_CACHE_STARTUP_QUERIES`                    | *string (SQL queries)*                              | -                 | SQL queries to run during database startup; this is useful for tuning and [enabling WAL mode](#message-cache)                                                                                                                   |

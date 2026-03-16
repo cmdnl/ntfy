@@ -95,7 +95,8 @@ type Config struct {
 	ListenUnixMode                       fs.FileMode
 	KeyFile                              string
 	CertFile                             string
-	DatabaseURL                          string // PostgreSQL connection string (e.g. "postgres://user:pass@host:5432/ntfy")
+	DatabaseURL                          string   // PostgreSQL connection string (e.g. "postgres://user:pass@host:5432/ntfy")
+	DatabaseReplicaURLs                  []string // PostgreSQL read replica connection strings
 	FirebaseKeyFile                      string
 	CacheFile                            string
 	CacheDuration                        time.Duration

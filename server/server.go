@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"embed"
 	"encoding/base64"
 	"encoding/json"
@@ -33,6 +32,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v2"
+	"heckel.io/ntfy/v2/db"
 	"heckel.io/ntfy/v2/db/pg"
 	"heckel.io/ntfy/v2/log"
 	"heckel.io/ntfy/v2/message"
@@ -47,7 +47,7 @@ import (
 // Server is the main server, providing the UI and API for ntfy
 type Server struct {
 	config            *Config
-	db                *sql.DB // Shared PostgreSQL connection pool, nil when using SQLite
+	db                *db.DB // Shared PostgreSQL connection pool (with optional replicas), nil when using SQLite
 	httpServer        *http.Server
 	httpsServer       *http.Server
 	httpMetricsServer *http.Server
@@ -179,13 +179,26 @@ func New(conf *Config) (*Server, error) {
 		stripe = newStripeAPI()
 	}
 	// Open shared PostgreSQL connection pool if configured
-	var pool *sql.DB
+	var pool *db.DB
 	if conf.DatabaseURL != "" {
-		var err error
-		pool, err = pg.Open(conf.DatabaseURL)
+		primary, err := pg.Open(conf.DatabaseURL)
 		if err != nil {
 			return nil, err
 		}
+		var replicas []*db.Host
+		for _, replicaURL := range conf.DatabaseReplicaURLs {
+			r, err := pg.OpenReplica(replicaURL)
+			if err != nil {
+				// Close already-opened replicas before returning
+				for _, opened := range replicas {
+					opened.DB.Close()
+				}
+				primary.DB.Close()
+				return nil, fmt.Errorf("failed to open database replica: %w", err)
+			}
+			replicas = append(replicas, r)
+		}
+		pool = db.New(primary, replicas)
 	}
 	messageCache, err := createMessageCache(conf, pool)
 	if err != nil {
@@ -277,7 +290,7 @@ func New(conf *Config) (*Server, error) {
 	return s, nil
 }
 
-func createMessageCache(conf *Config, pool *sql.DB) (*message.Cache, error) {
+func createMessageCache(conf *Config, pool *db.DB) (*message.Cache, error) {
 	if conf.CacheDuration == 0 {
 		return message.NewNopStore()
 	} else if pool != nil {
@@ -867,6 +880,7 @@ func (s *Server) handlePublishInternal(r *http.Request, v *visitor) (*model.Mess
 	if m.Message == "" {
 		m.Message = emptyMessageBody
 	}
+	m.SanitizeUTF8()
 	delayed := m.Time > time.Now().Unix()
 	ev := logvrm(v, r, m).
 		Tag(tagPublish).

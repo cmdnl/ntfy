@@ -6,11 +6,43 @@ and the [ntfy Android app](https://github.com/binwiederhier/ntfy-android/release
 
 | Component        | Version | Release date |
 |------------------|---------|--------------|
-| ntfy server      | v2.18.0 | Mar 7, 2026  |
+| ntfy server      | v2.19.1 | Mar 15, 2026 |
 | ntfy Android app | v1.24.0 | Mar 5, 2026  |
 | ntfy iOS app     | v1.3    | Nov 26, 2023 |
 
 Please check out the release notes for [upcoming releases](#not-released-yet) below.
+
+## ntfy server v2.19.1
+Released March 15, 2026
+
+This is a bugfix release to avoid PostgreSQL insert failures due to invalid UTF-8 messages. It also fixes `database-url`
+validation incorrectly rejecting `postgresql://` connection strings.
+
+**Bug fixes + maintenance:**
+
+* Fix invalid UTF-8 in HTTP headers (e.g. Latin-1 encoded text) causing PostgreSQL insert failures and dropping entire message batches
+* Fix `database-url` validation rejecting `postgresql://` connection strings ([#1657](https://github.com/binwiederhier/ntfy/issues/1657)/[#1658](https://github.com/binwiederhier/ntfy/pull/1658))
+
+## ntfy server v2.19.0
+Released March 15, 2026
+
+This is a fast-follow release that enables Postgres read replica support.
+
+To offload read-heavy queries from the primary database, you can optionally configure one or more read replicas
+using the `database-replica-urls` option. When configured, non-critical read-only queries (e.g. fetching messages, 
+checking access permissions, etc) are distributed across the replicas using round-robin, while all writes and
+correctness-critical reads continue to go to the primary. If a replica becomes unhealthy, ntfy automatically falls back
+to the primary until the replica recovers.
+
+**Features:**
+
+* Support [PostgreSQL read replicas](config.md#postgresql-experimental) for offloading non-critical read queries via `database-replica-urls` config option ([#1648](https://github.com/binwiederhier/ntfy/pull/1648))
+* Add interactive [config generator](config.md#config-generator) to the documentation to help create server configuration files ([#1654](https://github.com/binwiederhier/ntfy/pull/1654))
+
+**Bug fixes + maintenance:**
+
+* Web: Throttle notification sound in web app to play at most once every 2 seconds (similar to [#1550](https://github.com/binwiederhier/ntfy/issues/1550), thanks to [@jlaffaye](https://github.com/jlaffaye) for reporting)
+* Web: Add hover tooltips to icon buttons in web app account and preferences pages ([#1565](https://github.com/binwiederhier/ntfy/issues/1565), thanks to [@jermanuts](https://github.com/jermanuts) for reporting)
 
 ## ntfy server v2.18.0
 Released March 7, 2026
@@ -1755,9 +1787,4 @@ and the [ntfy Android app](https://github.com/binwiederhier/ntfy-android/release
 
 ## Not released yet
 
-### ntfy server v2.19.x (UNRELEASED)
-
-**Bug fixes + maintenance:**
-
-* Web: Throttle notification sound in web app to play at most once every 2 seconds (similar to [#1550](https://github.com/binwiederhier/ntfy/issues/1550), thanks to [@jlaffaye](https://github.com/jlaffaye) for reporting)
-* Web: Add hover tooltips to icon buttons in web app account and preferences pages ([#1565](https://github.com/binwiederhier/ntfy/issues/1565), thanks to [@jermanuts](https://github.com/jermanuts) for reporting)
+Nothing to see here.

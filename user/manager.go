@@ -49,7 +49,7 @@ var (
 // Manager handles user authentication, authorization, and management
 type Manager struct {
 	config     *Config
-	db         *sql.DB
+	db         *db.DB
 	queries    queries
 	statsQueue map[string]*Stats       // "Queue" to asynchronously write user stats to the database (UserID -> Stats)
 	tokenQueue map[string]*TokenUpdate // "Queue" to asynchronously write token access stats to the database (Token ID -> TokenUpdate)
@@ -58,7 +58,7 @@ type Manager struct {
 
 var _ Auther = (*Manager)(nil)
 
-func newManager(db *sql.DB, queries queries, config *Config) (*Manager, error) {
+func newManager(d *db.DB, queries queries, config *Config) (*Manager, error) {
 	if config.BcryptCost <= 0 {
 		config.BcryptCost = DefaultUserPasswordBcryptCost
 	}
@@ -67,7 +67,7 @@ func newManager(db *sql.DB, queries queries, config *Config) (*Manager, error) {
 	}
 	manager := &Manager{
 		config:     config,
-		db:         db,
+		db:         d,
 		statsQueue: make(map[string]*Stats),
 		tokenQueue: make(map[string]*TokenUpdate),
 		queries:    queries,
@@ -415,7 +415,7 @@ func (a *Manager) userByToken(token string) (*User, error) {
 
 // UserByStripeCustomer returns the user with the given Stripe customer ID if it exists, or ErrUserNotFound otherwise
 func (a *Manager) UserByStripeCustomer(customerID string) (*User, error) {
-	rows, err := a.db.Query(a.queries.selectUserByStripeCustomerID, customerID)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectUserByStripeCustomerID, customerID)
 	if err != nil {
 		return nil, err
 	}
@@ -425,7 +425,7 @@ func (a *Manager) UserByStripeCustomer(customerID string) (*User, error) {
 // Users returns a list of users. It loads all users in a single query
 // rather than one query per user to avoid N+1 performance issues.
 func (a *Manager) Users() ([]*User, error) {
-	rows, err := a.db.Query(a.queries.selectUsers)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +434,7 @@ func (a *Manager) Users() ([]*User, error) {
 
 // UsersCount returns the number of users in the database
 func (a *Manager) UsersCount() (int64, error) {
-	rows, err := a.db.Query(a.queries.selectUserCount)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectUserCount)
 	if err != nil {
 		return 0, err
 	}
@@ -660,7 +660,7 @@ func (a *Manager) authorizeTopicAccess(usernameOrEveryone, topic string) (read, 
 
 // AllGrants returns all user-specific access control entries, mapped to their respective user IDs
 func (a *Manager) AllGrants() (map[string][]Grant, error) {
-	rows, err := a.db.Query(a.queries.selectUserAllAccess)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectUserAllAccess)
 	if err != nil {
 		return nil, err
 	}
@@ -688,7 +688,7 @@ func (a *Manager) AllGrants() (map[string][]Grant, error) {
 
 // Grants returns all user-specific access control entries
 func (a *Manager) Grants(username string) ([]Grant, error) {
-	rows, err := a.db.Query(a.queries.selectUserAccess, username)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectUserAccess, username)
 	if err != nil {
 		return nil, err
 	}
@@ -753,7 +753,7 @@ func (a *Manager) RemoveReservations(username string, topics ...string) error {
 
 // Reservations returns all user-owned topics, and the associated everyone-access
 func (a *Manager) Reservations(username string) ([]Reservation, error) {
-	rows, err := a.db.Query(a.queries.selectUserReservations, Everyone, username)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectUserReservations, Everyone, username)
 	if err != nil {
 		return nil, err
 	}
@@ -796,7 +796,7 @@ func (a *Manager) HasReservation(username, topic string) (bool, error) {
 
 // ReservationsCount returns the number of reservations owned by this user
 func (a *Manager) ReservationsCount(username string) (int64, error) {
-	rows, err := a.db.Query(a.queries.selectUserReservationsCount, username)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectUserReservationsCount, username)
 	if err != nil {
 		return 0, err
 	}
@@ -962,7 +962,7 @@ func (a *Manager) canChangeToken(userID, token string) error {
 
 // Token returns a specific token for a user
 func (a *Manager) Token(userID, token string) (*Token, error) {
-	rows, err := a.db.Query(a.queries.selectToken, userID, token)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectToken, userID, token)
 	if err != nil {
 		return nil, err
 	}
@@ -972,7 +972,7 @@ func (a *Manager) Token(userID, token string) (*Token, error) {
 
 // Tokens returns all existing tokens for the user with the given user ID
 func (a *Manager) Tokens(userID string) ([]*Token, error) {
-	rows, err := a.db.Query(a.queries.selectTokens, userID)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectTokens, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -991,7 +991,7 @@ func (a *Manager) Tokens(userID string) ([]*Token, error) {
 }
 
 func (a *Manager) allProvisionedTokens() ([]*Token, error) {
-	rows, err := a.db.Query(a.queries.selectAllProvisionedTokens)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectAllProvisionedTokens)
 	if err != nil {
 		return nil, err
 	}
@@ -1114,7 +1114,7 @@ func (a *Manager) RemoveTier(code string) error {
 
 // Tiers returns a list of all Tier structs
 func (a *Manager) Tiers() ([]*Tier, error) {
-	rows, err := a.db.Query(a.queries.selectTiers)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectTiers)
 	if err != nil {
 		return nil, err
 	}
@@ -1134,7 +1134,7 @@ func (a *Manager) Tiers() ([]*Tier, error) {
 
 // Tier returns a Tier based on the code, or ErrTierNotFound if it does not exist
 func (a *Manager) Tier(code string) (*Tier, error) {
-	rows, err := a.db.Query(a.queries.selectTierByCode, code)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectTierByCode, code)
 	if err != nil {
 		return nil, err
 	}
@@ -1144,7 +1144,7 @@ func (a *Manager) Tier(code string) (*Tier, error) {
 
 // TierByStripePrice returns a Tier based on the Stripe price ID, or ErrTierNotFound if it does not exist
 func (a *Manager) TierByStripePrice(priceID string) (*Tier, error) {
-	rows, err := a.db.Query(a.queries.selectTierByPriceID, priceID, priceID)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectTierByPriceID, priceID, priceID)
 	if err != nil {
 		return nil, err
 	}
@@ -1185,7 +1185,7 @@ func (a *Manager) readTier(rows *sql.Rows) (*Tier, error) {
 
 // PhoneNumbers returns all phone numbers for the user with the given user ID
 func (a *Manager) PhoneNumbers(userID string) ([]string, error) {
-	rows, err := a.db.Query(a.queries.selectPhoneNumbers, userID)
+	rows, err := a.db.ReadOnly().Query(a.queries.selectPhoneNumbers, userID)
 	if err != nil {
 		return nil, err
 	}

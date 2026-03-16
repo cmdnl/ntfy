@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 
+	"heckel.io/ntfy/v2/db"
 	"heckel.io/ntfy/v2/util"
 )
 
@@ -280,15 +281,15 @@ func NewSQLiteManager(filename, startupQueries string, config *Config) (*Manager
 	if !util.FileExists(parentDir) {
 		return nil, fmt.Errorf("user database directory %s does not exist or is not accessible", parentDir)
 	}
-	db, err := sql.Open("sqlite3", filename)
+	d, err := sql.Open("sqlite3", filename)
 	if err != nil {
 		return nil, err
 	}
-	if err := setupSQLite(db); err != nil {
+	if err := setupSQLite(d); err != nil {
 		return nil, err
 	}
-	if err := runSQLiteStartupQueries(db, startupQueries); err != nil {
+	if err := runSQLiteStartupQueries(d, startupQueries); err != nil {
 		return nil, err
 	}
-	return newManager(db, sqliteQueries, config)
+	return newManager(db.New(&db.Host{DB: d}, nil), sqliteQueries, config)
 }

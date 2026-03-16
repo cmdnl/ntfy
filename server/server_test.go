@@ -4441,3 +4441,88 @@ func TestServer_HandleError_SkipsWriteHeaderOnHijackedConnection(t *testing.T) {
 		}
 	})
 }
+
+func TestServer_Publish_InvalidUTF8InBody(t *testing.T) {
+	// All byte sequences from production logs, sent as message body
+	tests := []struct {
+		name    string
+		body    string
+		message string
+	}{
+		{"0xc9_0x43", "\xc9Cas du serveur", "\uFFFDCas du serveur"},                      // Latin-1 "ÉC"
+		{"0xae", "Product\xae Pro", "Product\uFFFD Pro"},                                 // Latin-1 "®"
+		{"0xe8_0x6d_0x65", "probl\xe8me critique", "probl\uFFFDme critique"},             // Latin-1 "ème"
+		{"0xb2", "CO\xb2 level high", "CO\uFFFD level high"},                             // Latin-1 "²"
+		{"0xe9_0x6d_0x61", "th\xe9matique", "th\uFFFDmatique"},                           // Latin-1 "éma"
+		{"0xed_0x64_0x65", "vid\xed\x64eo surveillance", "vid\uFFFDdeo surveillance"},    // Latin-1 "íde"
+		{"0xf3_0x6e_0x3a_0x20", "notificaci\xf3n: alerta", "notificaci\uFFFDn: alerta"},  // Latin-1 "ón: "
+		{"0xb7", "item\xb7value", "item\uFFFDvalue"},                                     // Latin-1 "·"
+		{"0xa8", "na\xa8ve", "na\uFFFDve"},                                               // Latin-1 "¨"
+		{"0x00", "hello\x00world", "helloworld"},                                         // NUL byte
+		{"0xdf_0x64", "gro\xdf\x64ruck", "gro\uFFFDdruck"},                               // Latin-1 "ßd"
+		{"0xe4_0x67_0x74", "tr\xe4gt Last", "tr\uFFFDgt Last"},                           // Latin-1 "ägt"
+		{"0xe9_0x65_0x20", "journ\xe9\x65 termin\xe9\x65", "journ\uFFFDe termin\uFFFDe"}, // Latin-1 "ée"
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTestServer(t, newTestConfig(t, ""))
+
+			// Publish via x-message header (the most common path for invalid UTF-8 from HTTP headers)
+			response := request(t, s, "PUT", "/mytopic", "", map[string]string{
+				"X-Message": tc.body,
+			})
+			require.Equal(t, 200, response.Code)
+			msg := toMessage(t, response.Body.String())
+			require.Equal(t, tc.message, msg.Message)
+
+			// Verify it was stored in the cache correctly
+			response = request(t, s, "GET", "/mytopic/json?poll=1", "", nil)
+			require.Equal(t, 200, response.Code)
+			msg = toMessage(t, response.Body.String())
+			require.Equal(t, tc.message, msg.Message)
+		})
+	}
+}
+
+func TestServer_Publish_InvalidUTF8InTitle(t *testing.T) {
+	s := newTestServer(t, newTestConfig(t, ""))
+	response := request(t, s, "PUT", "/mytopic", "valid body", map[string]string{
+		"Title": "\xc9clipse du syst\xe8me",
+	})
+	require.Equal(t, 200, response.Code)
+	msg := toMessage(t, response.Body.String())
+	require.Equal(t, "\uFFFDclipse du syst\uFFFDme", msg.Title)
+	require.Equal(t, "valid body", msg.Message)
+}
+
+func TestServer_Publish_InvalidUTF8InTags(t *testing.T) {
+	s := newTestServer(t, newTestConfig(t, ""))
+	response := request(t, s, "PUT", "/mytopic", "valid body", map[string]string{
+		"Tags": "probl\xe8me,syst\xe9me",
+	})
+	require.Equal(t, 200, response.Code)
+	msg := toMessage(t, response.Body.String())
+	require.Equal(t, "probl\uFFFDme", msg.Tags[0])
+	require.Equal(t, "syst\uFFFDme", msg.Tags[1])
+}
+
+func TestServer_Publish_InvalidUTF8WithFirebase(t *testing.T) {
+	// Verify that sanitization happens before Firebase dispatch, so Firebase
+	// receives clean UTF-8 strings rather than invalid byte sequences
+	sender := newTestFirebaseSender(10)
+	s := newTestServer(t, newTestConfig(t, ""))
+	s.firebaseClient = newFirebaseClient(sender, &testAuther{Allow: true})
+
+	response := request(t, s, "PUT", "/mytopic", "", map[string]string{
+		"X-Message": "notificaci\xf3n: alerta",
+		"Title":     "\xc9clipse",
+		"Tags":      "probl\xe8me",
+	})
+	require.Equal(t, 200, response.Code)
+
+	time.Sleep(100 * time.Millisecond) // Firebase publishing happens asynchronously
+	require.Equal(t, 1, len(sender.Messages()))
+	require.Equal(t, "notificaci\uFFFDn: alerta", sender.Messages()[0].Data["message"])
+	require.Equal(t, "\uFFFDclipse", sender.Messages()[0].Data["title"])
+	require.Equal(t, "probl\uFFFDme", sender.Messages()[0].Data["tags"])
+}

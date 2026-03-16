@@ -1,13 +1,13 @@
 package dbtest
 
 import (
-	"database/sql"
 	"fmt"
 	"net/url"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"heckel.io/ntfy/v2/db"
 	"heckel.io/ntfy/v2/db/pg"
 	"heckel.io/ntfy/v2/util"
 )
@@ -30,34 +30,35 @@ func CreateTestPostgresSchema(t *testing.T) string {
 	q.Set("pool_max_conns", testPoolMaxConns)
 	u.RawQuery = q.Encode()
 	dsn = u.String()
-	setupDB, err := pg.Open(dsn)
+	setupHost, err := pg.Open(dsn)
 	require.Nil(t, err)
-	_, err = setupDB.Exec(fmt.Sprintf("CREATE SCHEMA %s", schema))
+	_, err = setupHost.DB.Exec(fmt.Sprintf("CREATE SCHEMA %s", schema))
 	require.Nil(t, err)
-	require.Nil(t, setupDB.Close())
+	require.Nil(t, setupHost.DB.Close())
 	q.Set("search_path", schema)
 	u.RawQuery = q.Encode()
 	schemaDSN := u.String()
 	t.Cleanup(func() {
-		cleanDB, err := pg.Open(dsn)
+		cleanHost, err := pg.Open(dsn)
 		if err == nil {
-			cleanDB.Exec(fmt.Sprintf("DROP SCHEMA %s CASCADE", schema))
-			cleanDB.Close()
+			cleanHost.DB.Exec(fmt.Sprintf("DROP SCHEMA %s CASCADE", schema))
+			cleanHost.DB.Close()
 		}
 	})
 	return schemaDSN
 }
 
-// CreateTestPostgres creates a temporary PostgreSQL schema and returns an open *sql.DB connection to it.
+// CreateTestPostgres creates a temporary PostgreSQL schema and returns an open *db.DB connection to it.
 // It registers cleanup functions to close the DB and drop the schema when the test finishes.
 // If NTFY_TEST_DATABASE_URL is not set, the test is skipped.
-func CreateTestPostgres(t *testing.T) *sql.DB {
+func CreateTestPostgres(t *testing.T) *db.DB {
 	t.Helper()
 	schemaDSN := CreateTestPostgresSchema(t)
-	testDB, err := pg.Open(schemaDSN)
+	testHost, err := pg.Open(schemaDSN)
 	require.Nil(t, err)
+	d := db.New(testHost, nil)
 	t.Cleanup(func() {
-		testDB.Close()
+		d.Close()
 	})
-	return testDB
+	return d
 }

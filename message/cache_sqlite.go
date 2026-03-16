@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
+	"heckel.io/ntfy/v2/db"
 	"heckel.io/ntfy/v2/util"
 )
 
@@ -110,14 +111,14 @@ func NewSQLiteStore(filename, startupQueries string, cacheDuration time.Duration
 	if !util.FileExists(parentDir) {
 		return nil, fmt.Errorf("cache database directory %s does not exist or is not accessible", parentDir)
 	}
-	db, err := sql.Open("sqlite3", filename)
+	d, err := sql.Open("sqlite3", filename)
 	if err != nil {
 		return nil, err
 	}
-	if err := setupSQLite(db, startupQueries, cacheDuration); err != nil {
+	if err := setupSQLite(d, startupQueries, cacheDuration); err != nil {
 		return nil, err
 	}
-	return newCache(db, sqliteQueries, &sync.Mutex{}, batchSize, batchTimeout, nop), nil
+	return newCache(db.New(&db.Host{DB: d}, nil), sqliteQueries, &sync.Mutex{}, batchSize, batchTimeout, nop), nil
 }
 
 // NewMemStore creates an in-memory cache

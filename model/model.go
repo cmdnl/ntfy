@@ -70,6 +70,26 @@ func (m *Message) Context() log.Context {
 	return fields
 }
 
+// SanitizeUTF8 replaces invalid UTF-8 sequences and strips NUL bytes from all user-supplied
+// string fields. This is called early in the publish path so that all downstream consumers
+// (Firebase, WebPush, SMTP, cache) receive clean UTF-8 strings.
+func (m *Message) SanitizeUTF8() {
+	m.Topic = util.SanitizeUTF8(m.Topic)
+	m.Message = util.SanitizeUTF8(m.Message)
+	m.Title = util.SanitizeUTF8(m.Title)
+	m.Click = util.SanitizeUTF8(m.Click)
+	m.Icon = util.SanitizeUTF8(m.Icon)
+	m.ContentType = util.SanitizeUTF8(m.ContentType)
+	for i, tag := range m.Tags {
+		m.Tags[i] = util.SanitizeUTF8(tag)
+	}
+	if m.Attachment != nil {
+		m.Attachment.Name = util.SanitizeUTF8(m.Attachment.Name)
+		m.Attachment.Type = util.SanitizeUTF8(m.Attachment.Type)
+		m.Attachment.URL = util.SanitizeUTF8(m.Attachment.URL)
+	}
+}
+
 // ForJSON returns a copy of the message suitable for JSON output.
 // It clears the SequenceID if it equals the ID to reduce redundancy.
 func (m *Message) ForJSON() *Message {

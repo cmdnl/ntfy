@@ -11,6 +11,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
+	"heckel.io/ntfy/v2/db"
 	"heckel.io/ntfy/v2/db/pg"
 	"heckel.io/ntfy/v2/server"
 	"heckel.io/ntfy/v2/user"
@@ -379,11 +380,11 @@ func createUserManager(c *cli.Context) (*user.Manager, error) {
 		QueueWriterInterval: user.DefaultUserStatsQueueWriterInterval,
 	}
 	if databaseURL != "" {
-		pool, dbErr := pg.Open(databaseURL)
+		host, dbErr := pg.Open(databaseURL)
 		if dbErr != nil {
 			return nil, dbErr
 		}
-		return user.NewPostgresManager(pool, authConfig)
+		return user.NewPostgresManager(db.New(host, nil), authConfig)
 	} else if authFile != "" {
 		if !util.FileExists(authFile) {
 			return nil, errors.New("auth-file does not exist; please start the server at least once to create it")
