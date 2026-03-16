@@ -120,7 +120,7 @@ const NavList = (props) => {
   const showUpgradeBanner = config.enable_payments && !isAdmin && !isPaid;
   const showSubscriptionsList = props.subscriptions?.length > 0;
   const showNotificationPermissionRequired = useNotificationPermissionListener(() => notifier.notRequested());
-  const showNotificationPermissionDenied = useNotificationPermissionListener(() => notifier.denied());
+  const showNotificationPermissionDenied = false; // Disabled: we use a desktop tray app for notifications
   const showNotificationIOSInstallRequired = notifier.iosSupportedButInstallRequired();
   const showNotificationBrowserNotSupportedBox = !showNotificationIOSInstallRequired && !notifier.browserSupported();
   const showNotificationContextNotSupportedBox = notifier.browserSupported() && !notifier.contextSupported(); // Only show if notifications are generally supported in the browser
